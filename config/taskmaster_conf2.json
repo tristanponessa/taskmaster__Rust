@@ -1,0 +1,19 @@
+{
+    "shg":{
+        "cmd":"python3 pgrms/forever.py && python3 pgrms/forever.py",
+        "restart":"yes",
+        "nbps":"1",
+        "stoptime":"10",
+        "exitcode":"SIGINT"
+    },
+    "time_count":{
+        "autostart":"no",
+        "exitsignal":["15","10"]
+    },
+    "check":{
+        "nbps":"1",
+        "cmd":"python3 check.py",
+        "autostart":"no",
+        "exitcode":"2"
+    }
+}

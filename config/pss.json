@@ -1,0 +1,10 @@
+{
+    "9772": {
+        "name": "random101",
+        "cmd": "sh sec_counter.bash"
+    },
+    "9776": {
+        "name": "random101",
+        "cmd": "sh sec_counter.bash"
+    }
+}

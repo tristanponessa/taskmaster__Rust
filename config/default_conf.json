@@ -1,0 +1,18 @@
+{
+    "dft":{
+        "cmd":          "sh sec_counter.bash",
+        "nbps":         "1",
+        "timetillsuc":  "0",
+        "autostart":    "no",
+        "autorestart":  "no",
+        "stoptime":     "0",
+        "dir":          "./",
+        "env":          "",
+        "stdout":       "./dftout.stdout",
+        "stderr":       "./dfterr.stderr",
+        "nbretries":    "0",
+        "exitsignal":   "15",
+        "exitcode":     "0",
+        "umask":        "022"
+                }
+}

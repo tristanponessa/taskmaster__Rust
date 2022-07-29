@@ -1,0 +1,6 @@
+{
+	"random101":{
+        "cmd":"sh pgrms/sec_counter.bash",
+        "stoptime":"5"
+    }
+}
