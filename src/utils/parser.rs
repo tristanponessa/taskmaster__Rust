@@ -7,6 +7,7 @@
 ///
 /// The `new` function will panic if the size is zero.
 
+
 use std::fs::File;
 use std::path::Path;
 use std::ffi::OsStr;
@@ -68,12 +69,12 @@ impl ConfigParser {
             return Err(ErrMsg { name: String::from("file_no_exist"), msg:errmsgs.file_no_exist.replace("{}", file_name)});
         }
 
-        if path.extension().and_then(OsStr::to_str) != Some("sconfig") {
-            return Err(ErrMsg { name: String::from("file_ext_wrong"), msg:errmsgs.file_ext_wrong.replace("{}", file_name)});
-        }
-        
         if !path.is_file() {
             return Err(ErrMsg { name: String::from("not_regular_file"), msg:errmsgs.not_regular_file.replace("{}", file_name)});
+        }
+
+        if path.extension().and_then(OsStr::to_str) != Some("sconfig") {
+            return Err(ErrMsg { name: String::from("file_ext_wrong"), msg:errmsgs.file_ext_wrong.replace("{}", file_name)});
         }
 
         let opened_file = file.unwrap(); //checked that is some, will never panik
@@ -164,6 +165,8 @@ impl ErrMsgs {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::fs::PermissionsExt;
+    use std::fs::{Permissions, set_permissions};
 
     fn assert_cmp_err(e1 : &ErrMsg, e2 : &ErrMsg) {
         //if beginning of err msg matches
@@ -187,10 +190,25 @@ mod tests {
         };
     }
 
+    fn set_file_permission (file_name : &String, perm : &str) {
+        //in order to push 
+        let path = Path::new(file_name);
+
+        let write_only_flag = 0o6200; //-wS--S---
+        let all_flag = 0o0777; //rwxrwxrwx
+
+        match perm {
+            "write_only" => set_permissions(path, Permissions::from_mode(write_only_flag)).   
+                                                                    expect("failed to set file to write_only"),
+            //we need default case to exhaust match, this arm is to set file perm back to a read flag when the tests are over  in order to push on github
+            &_ => set_permissions(path, Permissions::from_mode(all_flag)).
+                                                                    expect("end of cargo  test : failed to set file  permissionsback to 0o777"),
+        }
+
+    }
+
     #[test]
     fn test_fn__check_file() {
-
-        let errmsgs = ErrMsgs::new_default();
 
         let test_dir = Path::new("./test_docs/file_state");
         assert!(test_dir.exists(), "couldnt access test dir {}", test_dir.to_str().unwrap());
@@ -200,17 +218,18 @@ mod tests {
         let wrong_format3 = test_dir.join(".wrong_file_name").to_str().unwrap().to_owned();
         let too_big = test_dir.join("too_many_chars.sconfig").to_str().unwrap().to_owned();
         let is_a_dir = test_dir.join("not_file.sconfig").to_str().unwrap().to_owned();
+
+        //rust test has no teardown, if a panic occurs, there's no way to reset file perm to normal so let's keep all as close otgether a possible
+        //we have to reset to no normal  by giving read  access so we can push on github
         let unaccessible = test_dir.join("unaccessible.sconfig").to_str().unwrap().to_owned();
+        set_file_permission(&unaccessible, "write_only");
+        assert_check_file("file_cant_open", &unaccessible);
+        set_file_permission(&unaccessible, "all");
 
         assert_check_file("not_regular_file", &is_a_dir);
-
-        
-
-        
-
-        
-
-
-
+        assert_check_file("file_too_big", &too_big);
+        assert_check_file("file_ext_wrong", &wrong_format1);
+        assert_check_file("file_ext_wrong", &wrong_format2);
+        assert_check_file("file_ext_wrong", &wrong_format3);
     }
 }
