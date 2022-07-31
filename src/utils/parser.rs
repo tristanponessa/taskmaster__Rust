@@ -1,4 +1,5 @@
 
+use std::collections::HashMap;
 /// Create &a new ThreadPool.
 ///
 /// The size is the number of threads in the pool.
@@ -8,26 +9,43 @@
 /// The `new` function will panic if the size is zero.
 
 
-use std::fs::File;
+use std::fs::{File, read_to_string};
 use std::path::Path;
 use std::ffi::OsStr;
+use regex::Regex;
 
 
 struct ConfigParser {
+    pgrm_name : String,
     cmd : String,
-    numprocs  : String,
-    umask  :  String,
-    workingdir  : String,
-    autostart  :  String,
-    autorestart  :  String,
-    exitcodes  :  String,
-    startretries  :  String,
-    starttime  :  String,
-    stopsignal  :  String,
-    stoptime  :  String,
-    stdout  :  String,
-    stderr  :  String,
-    env  :  String,
+    numprocs  : u8,
+    umask  :  u8,
+    workingdir  : Path,
+    autostart  : bool,
+    autorestart  : bool,
+    exitcodes  : Vec<u8>,
+    startretries  :  u8,
+    starttime  : u8,
+    stopsignal  : String,
+    stoptime  :  u8,
+    stdout  :  Path,
+    stderr  :  Path,
+    env  : HashMap<String, String>,
+}
+
+struct Limits {
+    //cmp with ConfigParser inst.
+    nb_prgms : Regex, //anti DoS atk
+    pgrm_name : Regex,
+    cmd : Regex, //anything between  
+    numprocs  : u8, //anti DoS atk
+    umask  : u8,
+    exitcodes  : u8,
+    startretries  : u8,
+    starttime  : u8,
+    stopsignal  : [&str; 5],
+    stoptime  : u8,
+    env  : Regex,
 }
 
 impl ConfigParser {
@@ -35,20 +53,37 @@ impl ConfigParser {
     fn new_default() -> Self {
 
         Self { 
+            pgrm_name : String::from("default_prgm"),
             cmd  : String::from("ls -la ."),
-            numprocs  : String::from("1"),
-            umask  : String::from("777"),
-            workingdir  : String::from("/tmp"),
-            autostart  : String::from("true"),
-            autorestart  : String::from("false"),
-            exitcodes  : String::from("0"),
-            startretries  : String::from("1"),
-            starttime  : String::from("2"),
+            numprocs  : 1,
+            umask  : 0o777,
+            workingdir  : Path::new("/tmp"),
+            autostart  : true,
+            autorestart  : false,
+            exitcodes  : vec![0,1],
+            startretries  : 3,
+            starttime  : 15,
             stopsignal  : String::from("TERM"),
-            stoptime  : String::from("10"),
-            stdout  : String::from("/tmp/ls.stdout"),
-            stderr  : String::from("/tmp/ls.stderr"),
-            env  : String::from("STARTED_BY :taskmaster"),
+            stoptime  : 10,
+            stdout  : Path::new("/tmp/ls.stdout"),
+            stderr  : Path::new("/tmp/ls.stderr"),
+            env  : HashMap::from([("STARTED_BY :taskmaster"),("author","trponess")]),
+        }
+    }
+
+    fn new_limits() -> Limits {
+        Limits {
+            nb_prgms : 10, //anti DoS atk
+            pgrm_name : Regex::new(r"^[a-zA-Z_]+$").unwrap(),
+            cmd : Regex::new(r#""([^;]*)""#).unwrap(), //anything between " "
+            numprocs  : 10, //anti DoS atk
+            umask  : 777,
+            exitcodes  : u8::MAX,
+            startretries  : u8::MAX,
+            starttime  : u8::MAX,
+            stopsignal  : ["SIGKILL", "SIGTERM", "SIGBUS", "SIGABORT", "HANGUP"],//array of all 16 signals morebut 16 is used for some reason 
+            stoptime  : 10,
+            env  : Regex::new(r"^[a-zA-Z_]+$").unwrap()
         }
     }
 
@@ -95,11 +130,63 @@ impl ConfigParser {
         Ok(opened_file)
     }
 
-    /*
-    fn read_file() -> Result<> {let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-        Ok(())}
-    */
+    fn parse_file (file_name : &String) -> Result<ConfigParser, ErrMsg> {
+
+        //two prgms cant have the same name 
+        //parser AND CHECK if lines valid
+        //each option is in once per pgrm 
+        //umask is a umask , stdout is a path, numprocs is a n int not neg nor over 1000 DoS attack
+        
+
+
+        let errmsgs = ErrMsgs::new_default();
+        let path= Path::new(file_name);
+
+        //read_file
+        let lines = match read_to_string(path) {
+            //expect("unable to proform file to string for parser");
+            Ok(r) => r,
+            Err(e) => return Err(ErrMsg { name: String::from("file_extract_fail"), msg:errmsgs.file_extract_fail.replace("{}", file_name)})
+        };
+
+        let lines : Vec<_> = lines.split("\n").collect();
+        let mut parsed = HashMap::new();
+
+        let limits
+
+        for line in lines.iter().enumerate() {
+
+            let (line_nb, line) = line;
+            //1st line
+            if line_nb == 0 && line.contains("pgrm_name")
+            //get nb of line for errs
+            /*1st line 1st option pgrm_name */
+            /* */
+            let r = line.split(":").collect();
+
+
+
+            
+            
+            //cmd line option
+            if line.contains(r#"""#) {
+                let r = l.split(r#"""#).collect();
+
+                let key = 
+                let cmd = r.
+            } else {
+                
+            }*/
+
+            
+        }
+
+
+
+
+
+    }
+    
 
     //main fn
     /*
@@ -120,6 +207,19 @@ struct ErrMsgs {
     file_ext_wrong : String,
     not_regular_file : String,
     metadata_access_denial : String,
+    file_extract_fail : String,
+}
+
+struct ParserErrsMsgs {
+    parse_err : String, //general
+    first_line : String,
+    first_param : String,
+    block_sep : String, 
+    nb_over_limit : String,
+    cmd_not_in_parentheses : String, 
+    not_path : String,
+    env_wrong_format : String,
+    no_line_jump : String,
 }
 
 struct ErrMsg {
@@ -138,6 +238,7 @@ impl ErrMsgs {
             file_ext_wrong   :  String::from("return Err: wrong extension |{}|, must be .sconfig"),
             not_regular_file   :  String::from("return Err: not regular file |{}|"),
             metadata_access_denial : String::from("return Err: couldn't extract metadata |{}|"),
+            file_extract_fail: String::from("return Err: couldn't extract content from |{}|")
        }
     }
 
@@ -208,6 +309,53 @@ mod tests {
     }
 
     #[test]
+    fn regex_test_env_vars() {
+        
+        use regex::Regex;
+
+    //valid
+    let str1 = "STARTED_BY=taskmaster;";
+    let str2 = "STARTEDBY=taskmaster;";
+    let str3 = "_STARTED_BY=taskmaster;ANSWE_R=42;";
+    let str7 = "STARTED_BY=taskmaster;STARTED_BY=44;";
+    
+    
+    //fails
+    let str12 = "STARTED_BY=taskmaster;STARTED_BY=44";
+    let str10 = "STARTED_BY=taskmaster STARTED_BY=44";
+    let str11 = "STARTED_BY=taskmaster STARTED_BY=44;";
+    let str4 = "STARTED_BY=taskmaster";
+    let str5 = "_=taskmaster";
+    let str6 = "=taskmaster";
+    let str8 = "STARTED_BY=;";
+    let str9 = "STARTED_BY= ;";
+    
+    
+
+    let re = Regex::new(r"([A-Z_]+=[a-zA-Z_0-9]+;)+").unwrap();
+    
+    let caps = re.captures(str11).unwrap();
+    for c in caps.iter() {
+        println!("{:?}", c);
+    }
+    
+    
+    assert!(re.is_match(str1)); // I expect "01" on stdout.
+    assert!(re.is_match(str2)); // I expect "01" on stdout.
+    assert!(re.is_match(str3)); // I expect "01" on stdout.
+    assert!(re.is_match(str7)); // I expect "01" on stdout.
+    
+    assert_eq!(false, re.is_match(str4)); // I expect "01" on stdout.
+    assert_eq!(false, re.is_match(str5)); // I expect "01" on stdout.
+    assert_eq!(false, re.is_match(str6)); // I expect "01" on stdout.
+    assert_eq!(false, re.is_match(str10), "{}", str10); // I expect "01" on stdout.
+    assert_eq!(false, re.is_match(str11), "{}", str11); // I expect "01" on stdout.
+    assert_eq!(false, re.is_match(str8)); // I expect "01" on stdout.
+    assert_eq!(false, re.is_match(str9)); // I expect "01" on stdout.
+    assert_eq!(false, re.is_match(str12)); // I expect "01" on stdout.
+    }
+
+    #[test]
     fn test_fn__check_file() {
 
         let test_dir = Path::new("./test_docs/file_state");
@@ -232,4 +380,11 @@ mod tests {
         assert_check_file("file_ext_wrong", &wrong_format2);
         assert_check_file("file_ext_wrong", &wrong_format3);
     }
+
+    fn test_fn__parse() {
+
+        
+    }
+
+
 }
