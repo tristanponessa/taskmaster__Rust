@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap};
 /// Create &a new ThreadPool.
 ///
 /// The size is the number of threads in the pool.
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 
 use std::fs::{File, read_to_string};
-use std::path::Path;
+use std::path::{Path, PathBuf}; //Path::new -> &Path plus needs Box<&Path> since it's unsized (don't implement Sized), Box or & or PathBuf(like an owned Path)  fixes it
 use std::ffi::OsStr;
 use regex::Regex;
 
@@ -18,38 +18,40 @@ use regex::Regex;
 struct ConfigParser {
     pgrm_name : String,
     cmd : String,
-    numprocs  : u8,
-    umask  :  u8,
-    workingdir  : Path,
+    numprocs  : u32,
+    umask  :  u32,
+    workingdir  : PathBuf,
     autostart  : bool,
     autorestart  : bool,
-    exitcodes  : Vec<u8>,
-    startretries  :  u8,
-    starttime  : u8,
+    exitcodes  : Vec<u32>,
+    startretries  :  u32,
+    starttime  : u32,
     stopsignal  : String,
-    stoptime  :  u8,
-    stdout  :  Path,
-    stderr  :  Path,
+    stoptime  :  u32,
+    stdout  :  PathBuf,
+    stderr  :  PathBuf,
     env  : HashMap<String, String>,
 }
 
+//Limits : all global data 
 struct Limits {
     //cmp with ConfigParser inst.
-    nb_prgms : Regex, //anti DoS atk
-    pgrm_name : Regex,
-    cmd : Regex, //anything between  
-    numprocs  : u8, //anti DoS atk
-    umask  : u8,
-    exitcodes  : u8,
-    startretries  : u8,
-    starttime  : u8,
+    //nb_prgms : Regex, //anti DoS atk
+    //pgrm_name : Regex,
+    //cmd : Regex, //anything between  
+    //numprocs  : u32, //anti DoS atk
+    //umask  : u32,
+    //exitcodes  : u32,
+    //startretries  : u32,
+    //starttime  : u32,
     stopsignal  : [String; 13],
-    stoptime  : u8,
-    env  : Regex,
+    //stoptime  : u32,
+    //env  : Regex,
 }
 
 impl ConfigParser {
 
+    //you have tol detail all fields and vals so this is usuelss
     /*fn new_default() -> Self {
         
         Self { 
@@ -74,14 +76,14 @@ impl ConfigParser {
     //we dont need to check nb threw int, regex does all the work
     fn new_limits() -> Limits {
         Limits {
-            nb_prgms : 10, //anti DoS atk
-            pgrm_name : Regex::new(r"^pgrm_name > [a-zA-Z_]+$").unwrap(),
-            cmd : Regex::new(r#""([^;]*)""#).unwrap(), //anything between " "
-            numprocs  : 10, //anti DoS atk
-            umask  : 0o777,
-            exitcodes  : u8::MAX,
-            startretries  : u16::MAX,
-            starttime  : u16::MAX,
+            //nb_prgms : 10, //anti DoS atk
+            //pgrm_name : Regex::new(r"^pgrm_name > [a-zA-Z_]+$").unwrap(),
+            //cmd : Regex::new(r#""([^;]*)""#).unwrap(), //anything between " "
+            //numprocs  : 10, //anti DoS atk
+            //umask  : 0o777,
+            //exitcodes  : u32::MAX,
+            //startretries  : u16::MAX,
+            //starttime  : u16::MAX,
             stopsignal  : [
                 String::from("SIGHUP"), //1
                 String::from("SIGINT"), //2
@@ -97,24 +99,54 @@ impl ConfigParser {
                 String::from("SIGALRM"), //14
                 String::from("SIGTERM"), //15
             ],//array of all 16 signals morebut 16 is used for some reason 
-            stoptime  : 10,
-            env  : Regex::new(r"^[a-zA-Z_]+=[a-zA-Z0-9 ]+$").unwrap()
+            //stoptime  : 10,
+            //env  : Regex::new(r"^[a-zA-Z_]+=[a-zA-Z0-9 ]+$").unwrap()
         }
     }
 
     //utility fns
-    fn is_regex(reg : &str , s : &str) -> bool {
+    fn is_regex(reg : &str , s : &String) -> bool {
         let re = Regex::new(reg).unwrap();
-        re.is_match(s)
+        re.is_match(&s)
     }
 
-    fn explode(s : &'a str , token : &'a str) -> (&str, &str) {
-        let g : Vec<_> = s.split(token).collect();
-        (g.get(0) , g.get(1))
+    fn explode(s : &String , token : String) -> (String, String)  {
+        let g : Vec<&str> = s.split(&token).collect::<Vec<&str>>(); //collect don't have Vec<String> impl
+        let p1 = String::from(*(g.get(0).unwrap())); //get returns &&str
+        let p2 = String::from(*(g.get(1).unwrap()));
+        (p1, p2)
+    }
+
+    fn hashmap_to_ConfigParser(m : &HashMap<String, String>) -> ConfigParser {
+
+        //env 
+        let mut env  : HashMap<String, String> = HashMap::new();
+        let parts : Vec<_> = m.get("env").unwrap().split(",").collect();
+        for p in parts {
+            let (var, val) = Self::explode(&String::from(p), String::from("="));
+            env.insert(var, val);
+        }
+
+        ConfigParser {
+            pgrm_name : m.get("pgrm_name").unwrap().to_string(),
+            cmd : m.get("cmd").unwrap().to_string(),
+            numprocs: m.get("numprocs").unwrap().parse::<u32>().unwrap(),
+            umask: m.get("umask").unwrap().parse::<u32>().unwrap(),
+            workingdir: PathBuf::from(m.get("workingdir").unwrap()),
+            autostart: if m.get("autostart").unwrap() == "true" {true} else {false},
+            autorestart: if m.get("autorestart").unwrap() == "true" {true} else {false},
+            exitcodes: m.get("exitcodes").unwrap().split(",").map(|e| e.parse::<u32>().unwrap()).collect(),
+            startretries: m.get("startretries").unwrap().parse::<u32>().unwrap(),
+            starttime: m.get("starttime").unwrap().parse::<u32>().unwrap(),
+            stopsignal: m.get("stopsignal").unwrap().to_string(),
+            stoptime: m.get("stoptime").unwrap().parse::<u32>().unwrap(),
+            stdout: PathBuf::from(m.get("stdout").unwrap()),
+            stderr: PathBuf::from(m.get("stderr").unwrap()),
+            env,
+        }
     }
 
     //subs fns
-
     fn check_file(file_name : &String) -> Result<File, ErrMsg> {
 
         let path = Path::new(file_name);
@@ -155,7 +187,7 @@ impl ConfigParser {
         Ok(opened_file)
     }
 
-    fn read_file(file_name : &String) -> Result<Vec<&str>, ErrMsg> {
+    fn read_file(file_name : &String) -> Result<Vec<String>, ErrMsg> {
         
         let FileErrMsgs = FileErrMsgs::new_default();
         let path= Path::new(file_name);
@@ -163,11 +195,11 @@ impl ConfigParser {
         let lines = match read_to_string(path) {
             //expect("unable to proform file to string for parser");
             Ok(content) => content,
-            Err(e) => return Err(ErrMsg { name: String::from("file_extract_fail"), 
-                                                msg:FileErrMsgs.file_extract_fail.replace("{}", e.to_str())})
+            Err(_) => return Err(ErrMsg { name: String::from("file_extract_fail"), 
+                                                msg:FileErrMsgs.file_extract_fail.replace("{}", "")})
         };
 
-        let lines : Vec<_> = lines.split("\n").collect();
+        let lines : Vec<_> = lines.split("\n").map(|e| String::from(e)).collect();
         Ok(lines)
     }
 
@@ -185,103 +217,108 @@ impl ConfigParser {
         let block_size = 14;
         let nb_lines = lines.len();
         if nb_lines == 0 || nb_lines % block_size != 0 { //warning 0 % 14 == 0 which means empty file     already checkedin Self::check_file
-            return ParserErrsMsgs::new(String::from("uneven_nb_lines") , 
-                                        &format!("nb_lines : {}", nb_lines.to_string())[..])
+            return Err(ParserErrsMsgs::new("uneven_nb_lines", 
+                                        &format!("nb_lines : {}", nb_lines.to_string())[..]));
         } 
 
-        let mut parsed = HashMap::new(); //shouldbe config parser
-        let limits = ConfigParser::new_limits();
+        let mut parsed = HashMap::new(); //will be used to become ConfigParser
+        let limits = ConfigParser::new_limits(); //globals
         let mut offset = 0; 
 
         for line in lines.iter().enumerate() {
 
             let (line_nb, line) = line;
-            let (key, val) = Self::explode(line, ": ");
-            let line_detail = format!("line {} : {}", line_nb, line).to_str(); //for errors
+            let line = String::from(*line);
+            let (key, val) = Self::explode(&line, String::from(": "));
+            let line_detail = format!("line {} : {}", line_nb, line); //for errors
             
 
-            if line_nb == offset + 0 && Self::is_regex(r"^pgrm_name: (a-zA-Z_]+)$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 0 && !Self::is_regex(r"^pgrm_name: (a-zA-Z_]+)$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
-            if line_nb == offset + 1 && Self::is_regex(r#"^cmd: "([^;]*)"$"#, line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 1 && !Self::is_regex(r#"^cmd: "([^;]*)"$"#, &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
             //limit: 1-10
-            if line_nb == offset + 2 && Self::is_regex(r"^numprocs: (10|[1-9])$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 2 && !Self::is_regex(r"^numprocs: (10|[1-9])$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
             //limit: 777
-            if line_nb == offset + 3 && Self::is_regex(r"^umask: [0-7]{3})$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 3 && !Self::is_regex(r"^umask: [0-7]{3})$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
             //limit: has to exist
-            if line_nb == offset + 4 && Self::is_regex(r"^workingdir: [a-zA-Z0-9_/]+$", line) && Path::new(line).exists() {
-                parsed.insert(key, val);
+            if line_nb == offset + 4 && !Self::is_regex(r"^workingdir: [a-zA-Z0-9_/]+$", &line) && Path::new(&line).exists() {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
             //true false
-            if line_nb == offset + 5 && Self::is_regex(r"^autostart: (true|false)$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 5 && !Self::is_regex(r"^autostart: (true|false)$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
-            if line_nb == offset + 6 && Self::is_regex(r"^autorestart: (true|false)$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 6 && !Self::is_regex(r"^autorestart: (true|false)$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
 
-            if line_nb == offset + 7 && line.starts_with("exitcodes: "){
+            if line_nb == offset + 7 && !Self::is_regex(r"^exitcodes: ([0-9]+,)+$", &line) {
                 //regex crate look-around not supported so this don't work : r"^exitcodes: ((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(,(?!$)|$))+$"
                 let parts : Vec<_> = val.split(",").collect();
                 for p in parts {
                     let n = p.parse::<i32>().unwrap_or(-1);
                     if n < 0 || n > 254 {
-                        return ParserErrsMsgs::new(String::from("not_in_range_0_254") , line_detail);
+                        return Err(ParserErrsMsgs::new("not_in_range_0_254", &line_detail));
                     }
                 }
             } else {
-                parsed.insert(key, val);
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
             //limit: 999_999_999 before u32 MAX  nb ranges pain in regex
-            if line_nb == offset + 8 && Self::is_regex(r"^startretries: [0-9]{1..9}$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 8 && !Self::is_regex(r"^startretries: [0-9]{1..9}$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
-            if line_nb == offset + 9 && Self::is_regex(r"^starttime: [0-9]{1..9}$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 9 && !Self::is_regex(r"^starttime: [0-9]{1..9}$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
-            if line_nb == offset + 10 && Self::is_regex(r"^stopsignal: [A-Z]+$", line) {
-                if !limits.stopsignal.contains(val) {
-                    return ParserErrsMsgs::new(String::from("not_a_signal") , line_detail);
+            if line_nb == offset + 10 && !Self::is_regex(r"^stopsignal: [A-Z]+$", &line) {
+                if !limits.stopsignal.contains(&String::from(&val)) {
+                    return Err(ParserErrsMsgs::new("not_a_signal", &line_detail));
                 }
             } else {
-                parsed.insert(key, val);
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
-            if line_nb == offset + 11 && Self::is_regex(r"^stoptime: [0-9]{1..9}$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 11 && !Self::is_regex(r"^stoptime: [0-9]{1..9}$", &line) {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
-            if line_nb == offset + 12 && Self::is_regex(r"^stdout: [a-zA-Z0-9_/]+$", line) && Path::new(line).exists() {
-                parsed.insert(key, val);
+            if line_nb == offset + 12 && !Self::is_regex(r"^stdout: [a-zA-Z0-9_/]+$", &line) && Path::new(&line).exists() {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
-            if line_nb == offset + 13 && Self::is_regex(r"^stderr: [a-zA-Z0-9_/]+$", line) && Path::new(line).exists() {
-                parsed.insert(key, val);
+            if line_nb == offset + 13 && !Self::is_regex(r"^stderr: [a-zA-Z0-9_/]+$", &line) && Path::new(&line).exists() {
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
-            if line_nb == offset + 14 && Self::is_regex("^env: ([A-Z]+[A-Z_]+=[a-zA-Z0-9]+,)+$", line) {
-                parsed.insert(key, val);
+            if line_nb == offset + 14 && Self::is_regex("^env: ([A-Z]+[A-Z_]+=[a-zA-Z0-9]+,)+$", &line) {
+                
+
+                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
             if line_nb == offset + 14 && line != "" {
-                return ParserErrsMsgs::new(String::from("no_line_jump") , line_detail);
+                return Err(ParserErrsMsgs::new("no_line_jump" , &line_detail));
             }
 
-
-            if error {
-                return ParserErrMsgs::new(key , val)
+            if line != "" {
+                parsed.insert(key, val); //except empty line
             }
       
             offset += block_size;
           }
+
+          let res : ConfigParser = Self::hashmap_to_ConfigParser(&parsed);
+          Ok(res)
 
           //check if same prgm names for each block
         }
@@ -370,20 +407,20 @@ impl FileErrMsgs {
 struct ParserErrsMsgs;
 impl ParserErrsMsgs {
 
-    fn new(which : String , msg : &str) -> ErrMsg {
-        ErrMsg {name : which,  msg : Self::get(which, format!("{}", msg).to_str())}    
+    fn new(which : &str, msg : &str) -> ErrMsg {
+        ErrMsg {name : String::from(which),  msg : Self::get(which, format!("{}", msg))}    
     }
 
     fn get(field : &str, msg : String) -> String {
         //String contenation : Add trait  String + &str
         let prefix = "Parser Error";
         let errmsg = match field {
-            "parse_err" => "general parsing",
-            "first_line" => "1st line must be 1.pgrm_name > val",
-            "nb_over_limit" => "to avoid DoS, choose a lower nb",
-            "cmd_not_in_parantheses" => "cmd must be between quotes",
-            "not_path" => "file must exist and be a regular file",
-            "env_wrong_format" => "all env vars must be formated ENV_VAR=val",
+            "parse_err" => "general parsing error, recheck your input file",
+            //"first_line" => "1st line must be 1.pgrm_name > val",
+            //"nb_over_limit" => "to avoid DoS, choose a lower nb",
+            //"cmd_not_in_parantheses" => "must begin cmd: AND cmd must be between quotes",
+            //"not_path" => "file must exist and be a regular file",
+            //"env_wrong_format" => "all env vars must be formated ENV_VAR=val",
             "no_line_jump" => "must be a return line between each prgm block",
             "uneven_nb_lines" => "foreach profile, you must put all options, end with a linejump",
             "not_in_range_0_254" => "val must in range 0 - 254",
@@ -468,10 +505,10 @@ mod tests {
         assert_check_file("file_ext_wrong", &wrong_format3);
     }
 
-    fn test_fn__parse() {
+    //fn test_fn__parse() {
 
         
-    }
+   // }
 
 
 }
