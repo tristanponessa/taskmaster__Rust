@@ -362,6 +362,7 @@ struct ParserErrsMsgs {
     no_line_jump : String,
 }*/
 
+#[derive(Debug)]
 struct ErrMsg {
     name : String, 
     msg : String,
@@ -435,8 +436,16 @@ impl ParserErrsMsgs {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
     use std::os::unix::fs::PermissionsExt;
     use std::fs::{Permissions, set_permissions};
+
+    fn vec_eq(v1: &Vec<String>, v2: &Vec<String>)-> bool {
+        let s1: HashSet<_> = v1.iter().collect(); //copy turns iter that uses refs to owned vals by cloning
+        let s2: HashSet<_> = v2.iter().collect();
+        let diff: Vec<_> = s1.difference(&s2).collect();
+        diff.len() == 0
+    }
 
     fn assert_cmp_err(e1 : &ErrMsg, e2 : &ErrMsg) {
         //if beginning of err msg matches
@@ -447,7 +456,7 @@ mod tests {
         assert_eq!(e1.name, e2.name);
     }
 
-    fn assert_check_file(errmsg_field: &str, file_name: &String) {
+    fn assert_check_wrong_file(errmsg_field: &str, file_name: &String) {
         let expected_errmsg = ErrMsg {
             name : errmsg_field.to_owned(),
             msg : FileErrMsgs::get(errmsg_field)
@@ -459,7 +468,13 @@ mod tests {
             Err(errmsg) => assert_cmp_err(&expected_errmsg, &errmsg),
         };
     }
+    
+    fn assert_check_right_file(file_name: &String) {
+        let r = ConfigParser::check_file(file_name);
+        assert!(r.is_ok());
+    }
 
+    //for test check file
     fn set_file_permission (file_name : &String, perm : &str) {
         //in order to push 
         let path = Path::new(file_name);
@@ -495,20 +510,46 @@ mod tests {
         //we have to reset to no normal  by giving read  access so we can push on github
         let unaccessible = test_dir.join("unaccessible.sconfig").to_str().unwrap().to_owned();
         set_file_permission(&unaccessible, "write_only");
-        assert_check_file("file_cant_open", &unaccessible);
+        assert_check_wrong_file("file_cant_open", &unaccessible);
         set_file_permission(&unaccessible, "all");
 
-        assert_check_file("not_regular_file", &is_a_dir);
-        assert_check_file("file_size_invalid", &too_big);
-        assert_check_file("file_ext_wrong", &wrong_format1);
-        assert_check_file("file_ext_wrong", &wrong_format2);
-        assert_check_file("file_ext_wrong", &wrong_format3);
+        assert_check_wrong_file("not_regular_file", &is_a_dir);
+        assert_check_wrong_file("file_size_invalid", &too_big);
+        assert_check_wrong_file("file_ext_wrong", &wrong_format1);
+        assert_check_wrong_file("file_ext_wrong", &wrong_format2);
+        assert_check_wrong_file("file_ext_wrong", &wrong_format3);
+
+        let correct1 = test_dir.join("correct.sconfig").to_str().unwrap().to_owned();
+        assert_check_right_file(&correct1);
+
+
     }
 
-    //fn test_fn__parse() {
+    #[test]
+    fn test_fn__read_file() {
 
+        let correct_file_1 = String::from("./test_docs/parser_tests/small.txt");
+        let res = ConfigParser::read_file(&correct_file_1);
+        assert!(res.is_ok());
+        let res_content = res.unwrap();
+        let expected_content : Vec<String> = vec![
+            String::from("Lorem Ipsum is simply dummy text of the printing and typesetting industry."),
+            String::from("Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, "),
+            String::from("when an unknown printer took a galley of type and scrambled it to make a type specimen book."),
+            String::from(""),
+        ];
+
+        assert!(vec_eq(&res_content, &expected_content), "res content {:?}", res_content);
+
+        let not_existing = String::from("");
+        let res = ConfigParser::read_file(&not_existing);
+        assert!(res.is_err());
+        match res {
+            Ok(_) => (), //will never happen
+            Err(r) =>  assert_eq!(r.name, "file_extract_fail"),
+        }
         
-   // }
+   }
 
 
 }
