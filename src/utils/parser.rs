@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf}; //Path::new -> &Path plus needs Box<&Path> since
 use std::ffi::OsStr;
 use regex::Regex;
 
-
+#[derive(PartialEq,Debug)] //used for tests
 struct ConfigParser {
     pgrm_name : String,
     cmd : String,
@@ -124,7 +124,9 @@ impl ConfigParser {
         let parts : Vec<_> = m.get("env").unwrap().split(",").collect();
         for p in parts {
             let (var, val) = Self::explode(&String::from(p), String::from("="));
-            env.insert(var, val);
+            if var != "" {
+                env.insert(var, val);
+            }
         }
 
         ConfigParser {
@@ -572,7 +574,7 @@ mod tests {
 
         let expected_res : ConfigParser = ConfigParser {
             pgrm_name: String::from("nginx"),
-            cmd: String::from(r#"cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf""#),
+            cmd: String::from(r#""/usr/local/bin/nginx -c /etc/nginx/test.conf""#),
             numprocs: 1 as u32,
             umask: 22 as u32,
             workingdir: PathBuf::from("/tmp"),
@@ -592,18 +594,72 @@ mod tests {
         };
 
         let res = ConfigParser::parse_file(correct_content1);
-        match res {
+        match &res {
             Ok(r) => (),
             Err(r) => assert!(false, "{} {}", r.name, r.msg),
         };
+        let res= res.unwrap();
+
+        assert_eq!(expected_res, res);
+
+        //test each parser error
+        //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {...expected_res, stoptime: 564564654321321321321 };
+        //let expected_res_WRONG_ : ConfigParser = ConfigParser {...expected_res, x: wrong_val };
+        //let mut exitcodes_correct_content = correct_content1.clone().
+        //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {stoptime: 564564654321321321321,  ..expected_res };
+
+        //from ConfigParser::read_file
+        /*let correct_content2 = vec![
+            String::from("prgm_name: LS"),
+            String::from(r#"cmd: "ls -la""#),
+            String::from("numprocs: 10"),
+            String::from("umask: 777"),
+            String::from("workingdir: ./tmp"),
+            String::from("autostart: false"),
+            String::from("autorestart: true"),
+            String::from("exitcodes: 12"),
+            String::from("startretries: 3"),
+            String::from("starttime: 5"),
+            String::from("stopsignal: TERM"),
+            String::from("stoptime: 10"),
+            String::from("stdout: ./tmp/nginx.stdout"),
+            String::from("stderr: ./tmp/nginx.stderr"),
+            String::from("env: V_=0,"),
+            String::from(""),
+        ];
+
+        let expected_res2 : ConfigParser = ConfigParser {
+            pgrm_name: String::from("LS"),
+            cmd: String::from(r#"cmd: "ls -la""#),
+            numprocs: 10 as u32,
+            umask: 777 as u32,
+            workingdir: PathBuf::from("/tmp"),
+            autostart: false,
+            autorestart: true,
+            exitcodes: vec![12 as u32],
+            startretries: 3 as u32,
+            starttime: 5 as u32,
+            stopsignal: String::from("TERM"),
+            stoptime: 10 as u32,
+            stdout: PathBuf::from("/tmp/nginx.stdout"),
+            stderr: PathBuf::from("/tmp/nginx.stderr"),
+            env: HashMap::from([
+                (String::from("V_"), String::from("0")),
+            ])
+        };
+
+        let res = ConfigParser::parse_file(correct_content2);
+        match res {
+            Ok(r) => (),
+            Err(r) => assert!(false, "{} {}", r.name, r.msg),
+        };*/
+
 
 
         
     }
 
-        //test each parser error
-        //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {...expected_res, stoptime: 564564654321321321321 };
-        //let expected_res_WRONG_ : ConfigParser = ConfigParser {...expected_res, x: wrong_val };
+        
 
 }
 
