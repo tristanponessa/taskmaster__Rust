@@ -107,13 +107,13 @@ impl ConfigParser {
     //utility fns
     fn is_regex(reg : &str , s : &String) -> bool {
         let re = Regex::new(reg).unwrap();
-        re.is_match(&s)
+        re.is_match(s)
     }
 
     fn explode(s : &String , token : String) -> (String, String)  {
         let g : Vec<&str> = s.split(&token).collect::<Vec<&str>>(); //collect don't have Vec<String> impl
-        let p1 = String::from(*(g.get(0).unwrap())); //get returns &&str
-        let p2 = String::from(*(g.get(1).unwrap()));
+        let p1 = String::from(*(g.get(0).unwrap_or(&""))); //get returns &&str
+        let p2 = String::from(*(g.get(1).unwrap_or(&"")));
         (p1, p2)
     }
 
@@ -128,7 +128,7 @@ impl ConfigParser {
         }
 
         ConfigParser {
-            pgrm_name : m.get("pgrm_name").unwrap().to_string(),
+            pgrm_name : m.get("prgm_name").unwrap().to_string(),
             cmd : m.get("cmd").unwrap().to_string(),
             numprocs: m.get("numprocs").unwrap().parse::<u32>().unwrap(),
             umask: m.get("umask").unwrap().parse::<u32>().unwrap(),
@@ -205,7 +205,7 @@ impl ConfigParser {
 
 
     
-    fn parse_file (lines : Vec<&str>) -> Result<ConfigParser, ErrMsg> {
+    fn parse_file (lines : Vec<String>) -> Result<ConfigParser, ErrMsg> {
 
         //two prgms cant have the same name 
         //parser AND CHECK if lines valid
@@ -214,9 +214,9 @@ impl ConfigParser {
     
         //global tests
         //we checked file size in check_file
-        let block_size = 14;
+        let block_size = 16;
         let nb_lines = lines.len();
-        if nb_lines == 0 || nb_lines % block_size != 0 { //warning 0 % 14 == 0 which means empty file     already checkedin Self::check_file
+        if nb_lines == 0 || nb_lines % block_size != 0 { //warning 0 % 16 == 0 which means empty file     already checkedin Self::check_file
             return Err(ParserErrsMsgs::new("uneven_nb_lines", 
                                         &format!("nb_lines : {}", nb_lines.to_string())[..]));
         } 
@@ -228,12 +228,12 @@ impl ConfigParser {
         for line in lines.iter().enumerate() {
 
             let (line_nb, line) = line;
-            let line = String::from(*line);
+            let line = String::from(line);
             let (key, val) = Self::explode(&line, String::from(": "));
-            let line_detail = format!("line {} : {}", line_nb, line); //for errors
+            let line_detail = format!("line {} |{}|", line_nb, line); //for errors
             
 
-            if line_nb == offset + 0 && !Self::is_regex(r"^pgrm_name: (a-zA-Z_]+)$", &line) {
+            if line_nb == offset + 0 && !Self::is_regex(r"^prgm_name: [a-zA-Z_]+$", &line) {
                 return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
             if line_nb == offset + 1 && !Self::is_regex(r#"^cmd: "([^;]*)"$"#, &line) {
@@ -269,8 +269,6 @@ impl ConfigParser {
                         return Err(ParserErrsMsgs::new("not_in_range_0_254", &line_detail));
                     }
                 }
-            } else {
-                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
             //limit: 999_999_999 before u32 MAX  nb ranges pain in regex
@@ -284,8 +282,6 @@ impl ConfigParser {
                 if !limits.stopsignal.contains(&String::from(&val)) {
                     return Err(ParserErrsMsgs::new("not_a_signal", &line_detail));
                 }
-            } else {
-                return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
             if line_nb == offset + 11 && !Self::is_regex(r"^stoptime: [0-9]{1..9}$", &line) {
@@ -306,7 +302,7 @@ impl ConfigParser {
                 return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
-            if line_nb == offset + 14 && line != "" {
+            if line_nb == offset + 15 && line != "" {
                 return Err(ParserErrsMsgs::new("no_line_jump" , &line_detail));
             }
 
@@ -437,6 +433,7 @@ impl ParserErrsMsgs {
 mod tests {
     use super::*;
     use std::collections::HashSet;
+    use std::hash::Hash;
     use std::os::unix::fs::PermissionsExt;
     use std::fs::{Permissions, set_permissions};
 
@@ -547,9 +544,67 @@ mod tests {
         match res {
             Ok(_) => (), //will never happen
             Err(r) =>  assert_eq!(r.name, "file_extract_fail"),
-        }
-        
+        }    
    }
 
+   #[test]
+   fn test_fn__parse_file() {
+
+        //from ConfigParser::read_file
+        let correct_content1 = vec![
+            String::from("prgm_name: nginx"),
+            String::from(r#"cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf""#),
+            String::from("numprocs: 1"),
+            String::from("umask: 022"),
+            String::from("workingdir: /tmp"),
+            String::from("autostart: true"),
+            String::from("autorestart: false"),
+            String::from("exitcodes: 0,2"),
+            String::from("startretries: 3"),
+            String::from("starttime: 5"),
+            String::from("stopsignal: TERM"),
+            String::from("stoptime: 10"),
+            String::from("stdout: /tmp/nginx.stdout"),
+            String::from("stderr: /tmp/nginx.stderr"),
+            String::from("env: STARTED_BY=taskmaster,ANSWER=42,"),
+            String::from(""),
+        ];
+
+        let expected_res : ConfigParser = ConfigParser {
+            pgrm_name: String::from("nginx"),
+            cmd: String::from(r#"cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf""#),
+            numprocs: 1 as u32,
+            umask: 22 as u32,
+            workingdir: PathBuf::from("/tmp"),
+            autostart: true,
+            autorestart: false,
+            exitcodes: vec![0 as u32,2 as u32],
+            startretries: 3 as u32,
+            starttime: 5 as u32,
+            stopsignal: String::from("TERM"),
+            stoptime: 10 as u32,
+            stdout: PathBuf::from("/tmp/nginx.stdout"),
+            stderr: PathBuf::from("/tmp/nginx.stderr"),
+            env: HashMap::from([
+                (String::from("STARTED_BY"), String::from("taskmaster")),
+                (String::from("ANSWER"), String::from("42")),
+            ])
+        };
+
+        let res = ConfigParser::parse_file(correct_content1);
+        match res {
+            Ok(r) => (),
+            Err(r) => assert!(false, "{} {}", r.name, r.msg),
+        };
+
+
+        
+    }
+
+        //test each parser error
+        //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {...expected_res, stoptime: 564564654321321321321 };
+        //let expected_res_WRONG_ : ConfigParser = ConfigParser {...expected_res, x: wrong_val };
 
 }
+
+
