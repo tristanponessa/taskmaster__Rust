@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf}; //Path::new -> &Path plus needs Box<&Path> since
 use std::ffi::OsStr;
 use regex::Regex;
 
-#[derive(PartialEq,Debug)] //used for tests
+#[derive(PartialEq,Debug)] //used for tests   Debug so cargo test can display if assert fails
 struct ConfigParser {
     pgrm_name : String,
     cmd : String,
@@ -282,7 +282,10 @@ impl ConfigParser {
                     return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
                 }
                 if !Path::new(&val).exists() {
-                    return Err(ErrMsg { name: String::from("file_no_exist"), msg:FileErrMsgs.file_no_exist.replace("{}", &line_detail)});
+                    return Err(ErrMsg { name: String::from("dir_no_exist"), msg:FileErrMsgs.file_no_exist.replace("{}", &line_detail)});
+                }
+                if !Path::new(&val).is_dir() {
+                    return Err(ErrMsg { name: String::from("not_dir"), msg:format!("must be a dir {}", &line_detail)});
                 }
             }
             //true false
@@ -333,6 +336,9 @@ impl ConfigParser {
                 if !Path::new(&val).exists() {
                     return Err(ErrMsg { name: String::from("file_no_exist"), msg:FileErrMsgs.file_no_exist.replace("{}", &line_detail)});
                 }
+                if !Path::new(&val).is_file() {
+                    return Err(ErrMsg { name: String::from("not_regular_file"), msg:FileErrMsgs.not_regular_file.replace("{}", &line_detail)});
+                }
             }
 
             if line_nb == offset + 13 {
@@ -341,6 +347,9 @@ impl ConfigParser {
                 }
                 if !Path::new(&val).exists() {
                     return Err(ErrMsg { name: String::from("file_no_exist"), msg:FileErrMsgs.file_no_exist.replace("{}", &line_detail)});
+                }
+                if !Path::new(&val).is_file() {
+                    return Err(ErrMsg { name: String::from("not_regular_file"), msg:FileErrMsgs.not_regular_file.replace("{}", &line_detail)});
                 }
             }
 
@@ -598,6 +607,20 @@ mod tests {
 
    #[test]
    fn test_fn__parse_file() {
+        /*
+            TESTS TO BE PROFORMED IN ORDER
+            valid : global correct 
+
+
+            invalid : under nb limit on all vals
+            invalid : over nb limit on all vals 
+            invalid : 
+
+            invalid : for each field test under/over/unexisted/ limit vals
+            
+        */
+
+
 
         //from ConfigParser::read_file
         let correct_content1 = vec![
@@ -640,7 +663,7 @@ mod tests {
             ])
         };
 
-        let res = ConfigParser::parse_file(correct_content1);
+        let res = ConfigParser::parse_file(correct_content1.clone());
         match &res {
             Ok(r) => (),
             Err(r) => assert!(false, "{} {}", r.name, r.msg),
@@ -649,6 +672,8 @@ mod tests {
 
         assert_eq!(expected_res, res);
 
+        
+
         //test each parser error
         //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {...expected_res, stoptime: 564564654321321321321 };
         //let expected_res_WRONG_ : ConfigParser = ConfigParser {...expected_res, x: wrong_val };
@@ -656,22 +681,22 @@ mod tests {
         //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {stoptime: 564564654321321321321,  ..expected_res };
 
         //from ConfigParser::read_file
-        /*let correct_content2 = vec![
+        let correct_content2 = vec![
             String::from("prgm_name: LS"),
             String::from(r#"cmd: "ls -la""#),
             String::from("numprocs: 10"),
             String::from("umask: 777"),
-            String::from("workingdir: ./tmp"),
+            String::from("workingdir: ./"),
             String::from("autostart: false"),
             String::from("autorestart: true"),
-            String::from("exitcodes: 12"),
-            String::from("startretries: 3"),
-            String::from("starttime: 5"),
-            String::from("stopsignal: KILL"),
-            String::from("stoptime: 10"),
-            String::from("stdout: ./tmp/nginx.stdout"),
-            String::from("stderr: ./tmp/nginx.stderr"),
-            String::from("env: V_=0,"),
+            String::from("exitcodes: 254"),
+            String::from("startretries: 999999999"),
+            String::from("starttime: 999999999"),
+            String::from("stopsignal: SIGKILL"),
+            String::from("stoptime: 999999999"),
+            String::from("stdout: ./test_docs/parser_tests/file.stdout"),
+            String::from("stderr: ./test_docs/parser_tests/file.stderr"),
+            String::from("env: V_=0"),
             String::from(""),
         ];
 
@@ -680,16 +705,16 @@ mod tests {
             cmd: String::from(r#"cmd: "ls -la""#),
             numprocs: 10 as u32,
             umask: 777 as u32,
-            workingdir: PathBuf::from("/tmp"),
+            workingdir: PathBuf::from("./"),
             autostart: false,
             autorestart: true,
             exitcodes: vec![254 as u32],
             startretries: 999_999_999 as u32,
             starttime: 999_999_999 as u32,
-            stopsignal: String::from("KILL"),
+            stopsignal: String::from("SIGKILL"),
             stoptime: 999_999_999 as u32,
-            stdout: PathBuf::from("/tmp/nginx.stdout"),
-            stderr: PathBuf::from("/tmp/nginx.stderr"),
+            stdout: PathBuf::from("./test_docs/parser_tests/file.stdout"),
+            stderr: PathBuf::from("./test_docs/parser_tests/file.stderr"),
             env: HashMap::from([
                 (String::from("V_"), String::from("0")),
             ])
@@ -700,7 +725,61 @@ mod tests {
             Ok(r) => (),
             Err(r) => assert!(false, "{} {}", r.name, r.msg),
         };
-        let res= res.unwrap();*/
+        let res= res.unwrap();
+
+
+
+        //TEST: invalid field prgm_name
+        //let invalid_prgm_name_1 = String::from(":");
+        //let invalid_prgm_name_2 = ;
+        //let invalid_prgm_name_3 = ;
+
+        let unexisting_file = "./xyz";
+        let not_a_file = "./test_docs/parser_tests";
+        let invalid_over_999999999 = u32::MAX;
+        let invalid_over_umask = 778 as u32;
+        let invalid_under_numprocs = 0;
+        
+        
+
+        //TEST: invalid field cmd
+
+        //TEST: invalid field numprocs
+
+        //TEST: invalid field umask
+
+        //TEST: invalid field exitcodes
+
+        //TEST: invalid field startretries
+
+        //TEST: invalid field starttime
+
+        //TEST: invalid field stopsignal
+
+        //TEST: invalid field stoptime
+
+        //TEST: invalid field workingdir
+        let mut content6546 = correct_content1.clone();
+        content6546[12] = format!("stdout: {}", not_a_file);
+        let expected_err_name_6546 = String::from("not_regular_file");
+        let res = ConfigParser::parse_file(content6546);
+        assert!(res.is_err());
+        match res {
+            Ok(r) => (),  //will never happen
+            Err(r) => assert_eq!(r.name, expected_err_name_6546),
+        };
+
+
+
+        //TEST: invalid field stdout
+
+        //TEST: invalid field stderr
+
+        //TEST: invalid field env
+
+        //TEST: invalid NO line jump
+
+
 
 
 
@@ -712,3 +791,33 @@ mod tests {
 }
 
 
+
+
+/* 
+#[derive(Debug)]
+struct X{
+    n:u32,
+    id:u32,
+    code:u32,
+}
+
+
+fn main() {
+
+let v1 = vec![1,2,3];
+let x1 = X{n:1,id:2,code:3};
+println!("{:?} \n {:?}\n", v1, x1);
+
+let mut v2 = v1.clone();
+v2[0] = 9;
+let x2 = X{code:777, ..x1};
+println!("{:?} \n {:?}\n", v2, x2);
+
+}
+
+
+
+
+
+
+*/
