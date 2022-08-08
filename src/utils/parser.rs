@@ -159,7 +159,7 @@ impl ConfigParser {
             workingdir: PathBuf::from(m.get("workingdir").unwrap()),
             autostart: if m.get("autostart").unwrap() == "true" {true} else {false},
             autorestart: if m.get("autorestart").unwrap() == "true" {true} else {false},
-            exitcodes: m.get("exitcodes").unwrap().split(",").map(|e| e.parse::<u32>().unwrap()).collect(),
+            exitcodes: m.get("exitcodes").unwrap().split(",").filter(|e| *e != "").map(|e| e.parse::<u32>().unwrap()).collect(),
             startretries: m.get("startretries").unwrap().parse::<u32>().unwrap(),
             starttime: m.get("starttime").unwrap().parse::<u32>().unwrap(),
             stopsignal: m.get("stopsignal").unwrap().to_string(),
@@ -297,12 +297,16 @@ impl ConfigParser {
             }
 
 
-            if line_nb == offset + 7 && !Self::is_regex(r"^exitcodes: ([0-9]+,)+$", &line) {
+            if line_nb == offset + 7 {
+                if !Self::is_regex(r"^exitcodes: ([0-9]+,)+$", &line) { 
+                    return Err(ParserErrsMsgs::new("parse_err", &line_detail));
+                }
+
                 //regex crate look-around not supported so this don't work : r"^exitcodes: ((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(,(?!$)|$))+$"
                 let parts : Vec<_> = val.split(",").collect();
                 for p in parts {
                     let n = p.parse::<i32>().unwrap_or(-1);
-                    if n < 0 || n > 254 {
+                    if n > 254 {
                         return Err(ParserErrsMsgs::new("not_in_range_0_254", &line_detail));
                     }
                 }
@@ -605,6 +609,23 @@ mod tests {
         }    
    }
 
+
+   fn assert_parser(correct_content: &Vec<String>, field: &str, val:&str,
+                     expected_err_name : &str, state: &str) {
+        let mut content = correct_content.clone();
+        let field_nb = content.iter().position(|r| r.contains(field)).expect(&format!("can't find index of {} in Vec<String>, you wrote the field wrong", field));
+        //let field_nb = strvec_find(&content, &String::from(field));
+        content[field_nb] = format!("{}: {}",field, val);
+        let res = ConfigParser::parse_file(content);
+        if state == "fail" {
+            assert!(res.is_err(), "ASSERT failed for FIELD:{} VAL:{} EXPECTED_ERR_NAME:{} STATE:{}", field, val, expected_err_name,state);
+            match res {
+                Ok(r) => (),  //will never happen
+                Err(r) => assert_eq!(r.name, *expected_err_name),
+            };  
+        }
+    }
+
    #[test]
    fn test_fn__parse_file() {
         /*
@@ -623,6 +644,7 @@ mod tests {
 
 
         //from ConfigParser::read_file
+        //this vec is used(cloned) by all error tests
         let correct_content1 = vec![
             String::from("prgm_name: nginx"),
             String::from(r#"cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf""#),
@@ -631,7 +653,7 @@ mod tests {
             String::from("workingdir: /tmp"),
             String::from("autostart: true"),
             String::from("autorestart: false"),
-            String::from("exitcodes: 0,2"),
+            String::from("exitcodes: 0,2,"),
             String::from("startretries: 3"),
             String::from("starttime: 5"),
             String::from("stopsignal: SIGTERM"),
@@ -689,7 +711,7 @@ mod tests {
             String::from("workingdir: ./"),
             String::from("autostart: false"),
             String::from("autorestart: true"),
-            String::from("exitcodes: 254"),
+            String::from("exitcodes: 254,"),
             String::from("startretries: 999999999"),
             String::from("starttime: 999999999"),
             String::from("stopsignal: SIGKILL"),
@@ -735,20 +757,38 @@ mod tests {
         //let invalid_prgm_name_3 = ;
 
         let unexisting_file = "./xyz";
-        let not_a_file = "./test_docs/parser_tests";
-        let invalid_over_999999999 = u32::MAX;
-        let invalid_over_umask = 778 as u32;
-        let invalid_under_numprocs = 0;
+        let invalid_over_999999999 = "1000000000";
+        
+        
+
         
         
 
         //TEST: invalid field cmd
 
         //TEST: invalid field numprocs
+        let invalid_under_numprocs = "0";
+        let invalid_over_numprocs = "11";
+        assert_parser(&correct_content1, "numprocs", invalid_under_numprocs,  "parse_err", "fail");
+        assert_parser(&correct_content1, "numprocs", invalid_over_numprocs,  "parse_err", "fail");
+        
 
         //TEST: invalid field umask
+        let invalid_over_umask = "778";
+        assert_parser(&correct_content1, "umask", invalid_over_umask,  "parse_err", "fail");
 
         //TEST: invalid field exitcodes
+        let invalid_exitcodes = "";
+        assert_parser(&correct_content1, "exitcodes", invalid_exitcodes,  "parse_err", "fail");
+        let invalid_exitcodes = "255";
+        assert_parser(&correct_content1, "exitcodes", invalid_exitcodes,  "parse_err", "fail");
+        let invalid_exitcodes = "0";
+        let invalid_exitcodes = "0,";
+        
+        
+
+
+
 
         //TEST: invalid field startretries
 
@@ -758,20 +798,14 @@ mod tests {
 
         //TEST: invalid field stoptime
 
-        //TEST: invalid field workingdir
-        let mut content6546 = correct_content1.clone();
-        content6546[12] = format!("stdout: {}", not_a_file);
-        let expected_err_name_6546 = String::from("not_regular_file");
-        let res = ConfigParser::parse_file(content6546);
-        assert!(res.is_err());
-        match res {
-            Ok(r) => (),  //will never happen
-            Err(r) => assert_eq!(r.name, expected_err_name_6546),
-        };
-
-
+        //TEST: invalid field stdout
+        let not_a_file = "./test_docs/parser_tests";
+        assert_parser(&correct_content1, "stdout", not_a_file,  "not_regular_file", "fail");
 
         //TEST: invalid field stdout
+        //TEST: invalid field workingdir
+        let not_a_dir = "./test_docs/parser_tests/file.stdout";
+        assert_parser(&correct_content1, "workingdir", not_a_dir,  "not_dir", "fail");
 
         //TEST: invalid field stderr
 
