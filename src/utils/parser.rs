@@ -121,7 +121,7 @@ impl ConfigParser {
             "stoptime" | "11"  => r"^stoptime: [0-9]{1,9}$",
             "stdout" | "12"  => r"^stdout: [a-zA-Z0-9._/]+$",
             "stderr" | "13"  => r"^stderr: [a-zA-Z0-9._/]+$",
-            "env" | "14"  => r"^env: ([A-Z]+[A-Z_]+=[a-zA-Z0-9]+,)+$",
+            "env" | "14"  => r"^env: ([A-Z]+[A-Z_]+=[a-zA-Z0-9_]+,)+$",
             &_  => "",
         }
     }
@@ -141,6 +141,10 @@ impl ConfigParser {
 
     fn hashmap_to_ConfigParser(m : &HashMap<String, String>) -> ConfigParser {
 
+        //ONLY USE THIS FUNCTION WITH 16 KEY VALS CAUSE CONFIGPARSER HAS THE EXACT 16 FIELDS 
+        if m.len() != 16 {
+            panic!("MISUSED FN: this fn is used wrong, hashmap should be size exact 16, check_file prevents this, but if called outside (for tests for example), call it multiple times for each 16");
+        }
         //env 
         let mut env  : HashMap<String, String> = HashMap::new();
         let parts : Vec<_> = m.get("env").unwrap().split(",").collect();
@@ -231,9 +235,29 @@ impl ConfigParser {
         format!("{} AND {}", &s1, &s2)
     }
 
+    fn multi_parse_file(lines : Vec<String>) -> Result<Vec<ConfigParser>, ErrMsg> {
+        //check_file checks if nb lines are correct
+        let rs = Vec::new();
+        let start = 0;
+        let block_size= 16;
 
+        while start < lines.len() {
+            let slice = lines[start..start + block_size].to_vec();
+            let r = Self::parse_file(slice);
+            match r{
+                Err(r) => return Err(r),
+                Ok(r) => rs.append(&r),
+            };
+        }
+        Ok(rs)
+    }
     
     fn parse_file (lines : Vec<String>) -> Result<ConfigParser, ErrMsg> {
+
+        //ONLY USE THIS FUNCTION WITH 16 LINES CAUSE CONFIGPARSER HAS THE EXACT 16 FIELDS 
+        if lines.len() != 16 {
+            panic!("MISUSED FN: this fn is used wrong, vec should be size exact 16, check_file prevents this, but if called outside (for tests for example), usemulti_parse instead")
+        }
 
         //two prgms cant have the same name 
         //parser AND CHECK if lines valid
@@ -282,7 +306,7 @@ impl ConfigParser {
                     return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
                 }
                 if !Path::new(&val).exists() {
-                    return Err(ErrMsg { name: String::from("dir_no_exist"), msg:FileErrMsgs.file_no_exist.replace("{}", &line_detail)});
+                    return Err(ErrMsg { name: String::from("file_no_exist"), msg:FileErrMsgs.file_no_exist.replace("{}", &line_detail)});
                 }
                 if !Path::new(&val).is_dir() {
                     return Err(ErrMsg { name: String::from("not_dir"), msg:format!("must be a dir {}", &line_detail)});
@@ -357,7 +381,7 @@ impl ConfigParser {
                 }
             }
 
-            if line_nb == offset + 14 && Self::is_regex("^env: ([A-Z]+[A-Z_]+=[a-zA-Z0-9]+,)+$", &line) {
+            if line_nb == offset + 14 && !Self::is_regex("^env: ([A-Z]+[A-Z_]+=[a-zA-Z0-9_]+,)+$", &line) {
                 return Err(ParserErrsMsgs::new("env_wrong_format" , &line_detail));
             }
 
@@ -366,6 +390,10 @@ impl ConfigParser {
             }
 
             if line != "" {
+                //check if key exists 
+                if parsed.contains_key(&key) {
+                    return Err(ParserErrsMsgs::new("prgm_name_exists" , &line_detail));
+                }
                 parsed.insert(key, val); //except empty line
             }
 
@@ -482,8 +510,9 @@ impl ParserErrsMsgs {
             "no_line_jump" => "must be a return line between each prgm block",
             "uneven_nb_lines" => "foreach profile, you must put all options, end with a linejump",
             "not_in_range_0_254" => "val must in range 0 - 254",
-            "not_in_range_0_999999999" => "val must in range 0 - 999_999_999",
+            //"not_in_range_0_999999999" => "val must in range 0 - 999_999_999",
             "not_a_signal" => "this signal is not implemented",
+            "prgm_name_exists" => "multiple prgms have the same name",
             &_ => panic!("ParserErrsMsg field {} don't exist", field),
         };
         format!("{} ! \n type {} : {} \n extra_info : {}\n", prefix, field, errmsg, msg)
@@ -613,7 +642,11 @@ mod tests {
    fn assert_parser(correct_content: &Vec<String>, field: &str, val:&str,
                      expected_err_name : &str, state: &str) {
         let mut content = correct_content.clone();
-        let field_nb = content.iter().position(|r| r.contains(field)).expect(&format!("can't find index of {} in Vec<String>, you wrote the field wrong", field));
+
+        let field_nb = match field {
+            "line_jump" => 15,
+            _ => content.iter().position(|r| r.contains(field)).expect(&format!("can't find index of {} in Vec<String>, you wrote the field wrong", field)),
+        };
         //let field_nb = strvec_find(&content, &String::from(field));
         content[field_nb] = format!("{}: {}",field, val);
         let res = ConfigParser::parse_file(content);
@@ -660,7 +693,7 @@ mod tests {
             String::from("stoptime: 10"),
             String::from("stdout: ./test_docs/parser_tests/file.stdout"),
             String::from("stderr: ./test_docs/parser_tests/file.stderr"),
-            String::from("env: STARTED_BY=taskmaster,ANSWER=42"),
+            String::from("env: STARTED_BY=taskmaster,ANSWER=42,"),
             String::from(""),
         ];
 
@@ -718,7 +751,23 @@ mod tests {
             String::from("stoptime: 999999999"),
             String::from("stdout: ./test_docs/parser_tests/file.stdout"),
             String::from("stderr: ./test_docs/parser_tests/file.stderr"),
-            String::from("env: V_=0"),
+            String::from("env: V_=0,"),
+            String::from(""),
+            String::from("prgm_name: LS2"),
+            String::from(r#"cmd: "ls -la""#),
+            String::from("numprocs: 10"),
+            String::from("umask: 777"),
+            String::from("workingdir: ./"),
+            String::from("autostart: false"),
+            String::from("autorestart: true"),
+            String::from("exitcodes: 254,"),
+            String::from("startretries: 999999999"),
+            String::from("starttime: 999999999"),
+            String::from("stopsignal: SIGKILL"),
+            String::from("stoptime: 999999999"),
+            String::from("stdout: ./test_docs/parser_tests/file.stdout"),
+            String::from("stderr: ./test_docs/parser_tests/file.stderr"),
+            String::from("env: V_=0,"),
             String::from(""),
         ];
 
@@ -756,8 +805,8 @@ mod tests {
         //let invalid_prgm_name_2 = ;
         //let invalid_prgm_name_3 = ;
 
-        let unexisting_file = "./xyz";
-        let invalid_over_999999999 = "1000000000";
+        
+        
         
         
 
@@ -782,37 +831,56 @@ mod tests {
         assert_parser(&correct_content1, "exitcodes", invalid_exitcodes,  "parse_err", "fail");
         let invalid_exitcodes = "255";
         assert_parser(&correct_content1, "exitcodes", invalid_exitcodes,  "parse_err", "fail");
-        let invalid_exitcodes = "0";
-        let invalid_exitcodes = "0,";
+        let invalid_exitcodes = "0"; //no comma
+        assert_parser(&correct_content1, "exitcodes", invalid_exitcodes,  "parse_err", "fail");
+        let invalid_exitcodes = "-1";
+        assert_parser(&correct_content1, "exitcodes", invalid_exitcodes,  "parse_err", "fail");
         
-        
-
-
-
-
         //TEST: invalid field startretries
-
         //TEST: invalid field starttime
+        //TEST: invalid field stoptime
+        let invalid_over_999999999 = "1000000000";
+        assert_parser(&correct_content1, "startretries", invalid_over_999999999,  "parse_err", "fail");
+        assert_parser(&correct_content1, "starttime", invalid_over_999999999,  "parse_err", "fail");
+        assert_parser(&correct_content1, "stoptime", invalid_over_999999999,  "parse_err", "fail");
+
 
         //TEST: invalid field stopsignal
-
-        //TEST: invalid field stoptime
+        let unknown_signal = "SIGCPP";
+        assert_parser(&correct_content1, "stopsignal", unknown_signal,  "not_a_signal", "fail");
 
         //TEST: invalid field stdout
+        //TEST: invalid field stderr
         let not_a_file = "./test_docs/parser_tests";
         assert_parser(&correct_content1, "stdout", not_a_file,  "not_regular_file", "fail");
+        let unexisting_file = "./xyz";        
+        assert_parser(&correct_content1, "stdout", unexisting_file,  "file_no_exist", "fail");
 
-        //TEST: invalid field stdout
         //TEST: invalid field workingdir
         let not_a_dir = "./test_docs/parser_tests/file.stdout";
         assert_parser(&correct_content1, "workingdir", not_a_dir,  "not_dir", "fail");
-
-        //TEST: invalid field stderr
+        let unexisting_file = "./xyz";        
+        assert_parser(&correct_content1, "workingdir", unexisting_file,  "file_no_exist", "fail");
 
         //TEST: invalid field env
+        let anything = "2";
+        assert_parser(&correct_content1, "env", anything,  "env_wrong_format", "fail");
+        let small_chars_key = "key=val,";
+        assert_parser(&correct_content1, "env", small_chars_key,  "env_wrong_format", "fail");
+        let no_comma =  "START=true";
+        assert_parser(&correct_content1, "env", no_comma,  "env_wrong_format", "fail");
+        let no_comma2 =  "START=true,END=false";
+        assert_parser(&correct_content1, "env", no_comma2,  "env_wrong_format", "fail");
+        let start_with_underscore =  "_START=true,";
+        assert_parser(&correct_content1, "env", start_with_underscore,  "env_wrong_format", "fail");
+        let second_start_with_underscore =  "ME=correct,_HERE=wrong,";
+        assert_parser(&correct_content1, "env", second_start_with_underscore,  "env_wrong_format", "fail");
+
+    
 
         //TEST: invalid NO line jump
-
+        let replace_line_jump = "-";
+        assert_parser(&correct_content1, "line_jump", replace_line_jump,  "no_line_jump", "fail");
 
 
 
