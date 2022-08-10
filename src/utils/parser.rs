@@ -107,7 +107,7 @@ impl ConfigParser {
     fn get_regex(which: &str) -> &str {
         //each nb corresponds to the line it has ot be on
         match which{
-            "prgm_name" | "0" => r"^prgm_name: [a-zA-Z_]+$",
+            "prgm_name" | "0" => r"^prgm_name: [a-zA-Z_0-9]+$",
             "cmd" | "1"  => r#"^cmd: "([^;]*)"$"#,
             "numprocs" | "2"   => r"^numprocs: (10|[1-9])$",
             "umask" | "3"  => r"^umask: [0-7]{3}$",
@@ -140,11 +140,7 @@ impl ConfigParser {
     }
 
     fn hashmap_to_ConfigParser(m : &HashMap<String, String>) -> ConfigParser {
-
-        //ONLY USE THIS FUNCTION WITH 16 KEY VALS CAUSE CONFIGPARSER HAS THE EXACT 16 FIELDS 
-        if m.len() != 16 {
-            panic!("MISUSED FN: this fn is used wrong, hashmap should be size exact 16, check_file prevents this, but if called outside (for tests for example), call it multiple times for each 16");
-        }
+        
         //env 
         let mut env  : HashMap<String, String> = HashMap::new();
         let parts : Vec<_> = m.get("env").unwrap().split(",").collect();
@@ -235,37 +231,47 @@ impl ConfigParser {
         format!("{} AND {}", &s1, &s2)
     }
 
+    /*fn duplicate_pgrm_name(v: &Vec<ConfigParser>) {
+        let refs_to_field_pgrm_name : Vec<&String> = Vec::with_capacity(v.len()); 
+        for e in v {
+            refs_to_field_pgrm_name.push(&e.pgrm_name);
+        }
+    }*/
+
     fn multi_parse_file(lines : Vec<String>) -> Result<Vec<ConfigParser>, ErrMsg> {
-        //check_file checks if nb lines are correct
-        let rs = Vec::new();
-        let start = 0;
+        
+        let block_size = 16;
+        let nb_lines = lines.len();
+        if nb_lines == 0 || nb_lines % block_size != 0 { //warning 0 % 16 == 0 which means empty file     already checkedin Self::check_file
+            return Err(ParserErrsMsgs::new("uneven_nb_lines", 
+                                        &format!("nb_lines : {}", nb_lines.to_string())[..]));
+        } 
+
+        let mut rs : Vec<ConfigParser> = Vec::new();
+        let mut pgrm_name_refs : Vec<&String> = vec![];//can have two with same name
+        let mut start = 0;
         let block_size= 16;
 
         while start < lines.len() {
             let slice = lines[start..start + block_size].to_vec();
             let r = Self::parse_file(slice);
-            match r{
-                Err(r) => return Err(r),
-                Ok(r) => rs.append(&r),
+            let r = match r{
+                Err(e) => return Err(e),
+                Ok(s) => s,//rs.push(s), CAUSES BORROW double borrow error on next line
             };
+            rs.push(r);
+            let last : &ConfigParser = rs.last_mut().unwrap();//&mut rs[(&mut rs.len()) - 1];//rs.last().unwrap(); only works with immutable rs
+            if pgrm_name_refs.contains(&&last.pgrm_name) {
+                return Err(ErrMsg{ name: ParserErrsMsgs::get("prgm_name_exists", last.pgrm_name), msg: String::from("")});
+            }
+            pgrm_name_refs.push(&last.pgrm_name);
+            start += block_size;
         }
         Ok(rs)
     }
     
     fn parse_file (lines : Vec<String>) -> Result<ConfigParser, ErrMsg> {
-
-        //ONLY USE THIS FUNCTION WITH 16 LINES CAUSE CONFIGPARSER HAS THE EXACT 16 FIELDS 
-        if lines.len() != 16 {
-            panic!("MISUSED FN: this fn is used wrong, vec should be size exact 16, check_file prevents this, but if called outside (for tests for example), usemulti_parse instead")
-        }
-
-        //two prgms cant have the same name 
-        //parser AND CHECK if lines valid
-        //each option is in once per pgrm 
-        //umask is a umask , stdout is a path, numprocs is a n int not neg nor over 1000 DoS attack
     
-        //global tests
-        //we checked file size in check_file
         let block_size = 16;
         let nb_lines = lines.len();
         if nb_lines == 0 || nb_lines % block_size != 0 { //warning 0 % 16 == 0 which means empty file     already checkedin Self::check_file
@@ -286,7 +292,7 @@ impl ConfigParser {
             let line_detail = format!("line{} {}=>{}", line_nb, Self::get_regex(&line_nb.to_string()),line); //for errors
             
 
-            if line_nb == offset + 0 && !Self::is_regex(r"^prgm_name: [a-zA-Z_]+$", &line) {
+            if line_nb == offset + 0 && !Self::is_regex(r"^prgm_name: [a-zA-Z_0-9]+$", &line) {
                 return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
             if line_nb == offset + 1 && !Self::is_regex(r#"^cmd: "([^;]*)"$"#, &line) {
@@ -390,10 +396,6 @@ impl ConfigParser {
             }
 
             if line != "" {
-                //check if key exists 
-                if parsed.contains_key(&key) {
-                    return Err(ParserErrsMsgs::new("prgm_name_exists" , &line_detail));
-                }
                 parsed.insert(key, val); //except empty line
             }
 
@@ -736,7 +738,7 @@ mod tests {
         //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {stoptime: 564564654321321321321,  ..expected_res };
 
         //from ConfigParser::read_file
-        let correct_content2 = vec![
+        let correct_content_2_prgms = vec![
             String::from("prgm_name: LS"),
             String::from(r#"cmd: "ls -la""#),
             String::from("numprocs: 10"),
@@ -771,7 +773,7 @@ mod tests {
             String::from(""),
         ];
 
-        let expected_res2 : ConfigParser = ConfigParser {
+        let expected_res_2_prgms : Vec<ConfigParser> = vec![ConfigParser {
             pgrm_name: String::from("LS"),
             cmd: String::from(r#"cmd: "ls -la""#),
             numprocs: 10 as u32,
@@ -789,29 +791,53 @@ mod tests {
             env: HashMap::from([
                 (String::from("V_"), String::from("0")),
             ])
-        };
+        },
+        ConfigParser {
+            pgrm_name: String::from("LS2"),
+            cmd: String::from(r#"cmd: "ls -la""#),
+            numprocs: 10 as u32,
+            umask: 777 as u32,
+            workingdir: PathBuf::from("./"),
+            autostart: false,
+            autorestart: true,
+            exitcodes: vec![254 as u32],
+            startretries: 999_999_999 as u32,
+            starttime: 999_999_999 as u32,
+            stopsignal: String::from("SIGKILL"),
+            stoptime: 999_999_999 as u32,
+            stdout: PathBuf::from("./test_docs/parser_tests/file.stdout"),
+            stderr: PathBuf::from("./test_docs/parser_tests/file.stderr"),
+            env: HashMap::from([
+                (String::from("V_"), String::from("0")),
+            ])
+        }];
 
-        let res = ConfigParser::parse_file(correct_content2);
+        let res = ConfigParser::multi_parse_file(correct_content_2_prgms.clone());
         match &res {
             Ok(r) => (),
             Err(r) => assert!(false, "{} {}", r.name, r.msg),
         };
-        let res= res.unwrap();
+        let multi_res= res.unwrap();
 
+        /////////////////ERROR TESTS 
+        //same prgm name
+        //let expected_res_copy = expected_res.clone();
+        let mut correct_content_2_prgms_c = correct_content_2_prgms.clone();
+        correct_content_2_prgms_c[16] = correct_content_2_prgms_c[0].clone();
+        let res = ConfigParser::multi_parse_file(correct_content_2_prgms_c);
+        match &res {
+            Ok(r) => assert!(false, "suppose to fail with same prgm name"),
+            Err(r) => assert_eq!(r.name,"prgm_name_exists"),
+        };
 
+        
+        
 
         //TEST: invalid field prgm_name
         //let invalid_prgm_name_1 = String::from(":");
         //let invalid_prgm_name_2 = ;
         //let invalid_prgm_name_3 = ;
 
-        
-        
-        
-        
-
-        
-        
 
         //TEST: invalid field cmd
 
