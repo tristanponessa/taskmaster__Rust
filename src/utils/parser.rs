@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf}; //Path::new -> &Path plus needs Box<&Path> since
 use std::ffi::OsStr;
 use regex::Regex;
 
-#[derive(PartialEq,Debug)] //used for tests   Debug so cargo test can display if assert fails
+#[derive(PartialEq,Debug,Clone)] //used for tests   Debug so cargo test can display if assert fails   Clone  formultiple borrows
 struct ConfigParser {
     pgrm_name : String,
     cmd : String,
@@ -248,7 +248,7 @@ impl ConfigParser {
         } 
 
         let mut rs : Vec<ConfigParser> = Vec::new();
-        let mut pgrm_name_refs : Vec<&String> = vec![];//can have two with same name
+        let mut pgrm_name_refs : Vec<String> = vec![];//can have two with same name
         let mut start = 0;
         let block_size= 16;
 
@@ -259,12 +259,13 @@ impl ConfigParser {
                 Err(e) => return Err(e),
                 Ok(s) => s,//rs.push(s), CAUSES BORROW double borrow error on next line
             };
-            rs.push(r);
-            let last : &ConfigParser = rs.last_mut().unwrap();//&mut rs[(&mut rs.len()) - 1];//rs.last().unwrap(); only works with immutable rs
-            if pgrm_name_refs.contains(&&last.pgrm_name) {
-                return Err(ErrMsg{ name: ParserErrsMsgs::get("prgm_name_exists", last.pgrm_name), msg: String::from("")});
+            rs.push(r.clone());
+            //let last = (rs.len()) - 1;
+            //let last : &ConfigParser = &mut rs[last]; //rs.clone().last_mut().unwrap(); //&mut rs[(&mut rs.len()) - 1];//rs.last().unwrap(); only works with immutable rs
+            if pgrm_name_refs.contains(&&r.pgrm_name) {
+                return Err(ParserErrsMsgs::new("prgm_name_exists", &r.pgrm_name.clone()));
             }
-            pgrm_name_refs.push(&last.pgrm_name);
+            pgrm_name_refs.push(r.pgrm_name.clone());
             start += block_size;
         }
         Ok(rs)
