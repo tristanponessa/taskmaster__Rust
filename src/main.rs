@@ -1,5 +1,7 @@
+use utils::terminal::run_terminal;
+
 mod utils;
 
 fn main() {
-    println!("Hello, world!");
+    run_terminal();
 }

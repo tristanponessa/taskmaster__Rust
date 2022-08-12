@@ -22,7 +22,7 @@ struct ConfigParser {
     umask  :  u32,
     workingdir  : PathBuf,
     autostart  : bool,
-    autorestart  : bool,
+    autorestart  : String,
     exitcodes  : Vec<u32>,
     startretries  :  u32,
     starttime  : u32,
@@ -113,7 +113,7 @@ impl ConfigParser {
             "umask" | "3"  => r"^umask: [0-7]{3}$",
             "workingdir" | "4" => r"^workingdir: [a-zA-Z0-9._/]+$",
             "autostart" | "5"  => r"^autostart: (true|false)$",
-            "autorestart" | "6"  => r"^autorestart: (true|false)$",
+            "autorestart" | "6"  => r"^autorestart: (true|false|unexpected)$",
             "exitcodes" | "7"  => r"^exitcodes: ([0-9]+,)+$",
             "startretries" | "8"  => r"^startretries: [0-9]{1,9}$",
             "starttime" | "9"  => r"^starttime: [0-9]{1,9}$",
@@ -158,7 +158,7 @@ impl ConfigParser {
             umask: m.get("umask").unwrap().parse::<u32>().unwrap(),
             workingdir: PathBuf::from(m.get("workingdir").unwrap()),
             autostart: if m.get("autostart").unwrap() == "true" {true} else {false},
-            autorestart: if m.get("autorestart").unwrap() == "true" {true} else {false},
+            autorestart: m.get("autorestart").unwrap().to_string(),
             exitcodes: m.get("exitcodes").unwrap().split(",").filter(|e| *e != "").map(|e| e.parse::<u32>().unwrap()).collect(),
             startretries: m.get("startretries").unwrap().parse::<u32>().unwrap(),
             starttime: m.get("starttime").unwrap().parse::<u32>().unwrap(),
@@ -323,7 +323,7 @@ impl ConfigParser {
             if line_nb == offset + 5 && !Self::is_regex(r"^autostart: (true|false)$", &line) {
                 return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
-            if line_nb == offset + 6 && !Self::is_regex(r"^autorestart: (true|false)$", &line) {
+            if line_nb == offset + 6 && !Self::is_regex(r"^autorestart: (true|false|unexpected)$", &line) {
                 return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
 
@@ -688,7 +688,7 @@ mod tests {
             String::from("umask: 022"),
             String::from("workingdir: /tmp"),
             String::from("autostart: true"),
-            String::from("autorestart: false"),
+            String::from("autorestart: unexpected"),
             String::from("exitcodes: 0,2,"),
             String::from("startretries: 3"),
             String::from("starttime: 5"),
@@ -707,7 +707,7 @@ mod tests {
             umask: 22 as u32,
             workingdir: PathBuf::from("/tmp"),
             autostart: true,
-            autorestart: false,
+            autorestart: String::from("unexpected"),
             exitcodes: vec![0 as u32,2 as u32],
             startretries: 3 as u32,
             starttime: 5 as u32,
@@ -781,7 +781,7 @@ mod tests {
             umask: 777 as u32,
             workingdir: PathBuf::from("./"),
             autostart: false,
-            autorestart: true,
+            autorestart: String::from("true"),
             exitcodes: vec![254 as u32],
             startretries: 999_999_999 as u32,
             starttime: 999_999_999 as u32,
@@ -800,7 +800,7 @@ mod tests {
             umask: 777 as u32,
             workingdir: PathBuf::from("./"),
             autostart: false,
-            autorestart: true,
+            autorestart: String::from("true"),
             exitcodes: vec![254 as u32],
             startretries: 999_999_999 as u32,
             starttime: 999_999_999 as u32,
