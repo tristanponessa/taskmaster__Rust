@@ -730,13 +730,14 @@ mod tests {
 
         assert_eq!(expected_res, res);
 
-        
+        let res = ConfigParser::multi_parse_file(correct_content1.clone());
+        match &res {
+            Ok(r) => (),
+            Err(r) => assert!(false, "{} {}", r.name, r.msg),
+        };
+        let multi_res= res.unwrap();
+        assert_eq!(multi_res, vec![expected_res]);
 
-        //test each parser error
-        //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {...expected_res, stoptime: 564564654321321321321 };
-        //let expected_res_WRONG_ : ConfigParser = ConfigParser {...expected_res, x: wrong_val };
-        //let mut exitcodes_correct_content = correct_content1.clone().
-        //let expected_res_WRONG_TIME : ConfigParser = ConfigParser {stoptime: 564564654321321321321,  ..expected_res };
 
         //from ConfigParser::read_file
         let correct_content_2_prgms = vec![
@@ -821,7 +822,6 @@ mod tests {
         let multi_res= res.unwrap();
 
         /////////////////ERROR TESTS 
-        //same prgm name
         //let expected_res_copy = expected_res.clone();
         let mut correct_content_2_prgms_c = correct_content_2_prgms.clone();
         correct_content_2_prgms_c[16] = correct_content_2_prgms_c[0].clone();
