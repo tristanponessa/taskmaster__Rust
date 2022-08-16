@@ -1,5 +1,7 @@
 use std::{io::{stdout, stdin, Write, Error}, process::Command, path::Path, env};
 
+//from what iunderstand a cmd is without piping &&  || | >>  << on   supervisor official doc examples and github repos  
+
 fn cmd_help(user_cmds : &[&str]) {
     eprintln!("help: {:?}", user_cmds);
 }
@@ -52,7 +54,7 @@ pub fn run_terminal() ->  Result<(),Error> {
             continue;
         }
 
-
+        //Config::parser cmd_args
         let parts : Vec<&str>  = input.trim().split_whitespace().collect();
         let command = *parts.first().unwrap(); //will always  succeed , handled  by prior if condition
         let args = match &parts {

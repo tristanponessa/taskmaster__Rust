@@ -1,12 +1,8 @@
 
 use std::collections::{HashMap};
-/// Create &a new ThreadPool.
-///
-/// The size is the number of threads in the pool.
-///
-/// # Panics
-///
-/// The `new` function will panic if the size is zero.
+/*
+    add stdout stderr : sys stdout insteadof file 
+*/
 
 
 use std::fs::{File, read_to_string};
@@ -14,10 +10,13 @@ use std::path::{Path, PathBuf}; //Path::new -> &Path plus needs Box<&Path> since
 use std::ffi::OsStr;
 use regex::Regex;
 
+
+
+
 #[derive(PartialEq,Debug,Clone)] //used for tests   Debug so cargo test can display if assert fails   Clone  formultiple borrows
-struct ConfigParser {
+pub  struct ConfigParser {
     pgrm_name : String,
-    cmd : String,
+    cmd : Vec<String>,
     numprocs  : u32,
     umask  :  u32,
     workingdir  : PathBuf,
@@ -48,6 +47,29 @@ struct Limits {
     //stoptime  : u32,
     //env  : Regex,
 }
+
+pub fn get_pgrm<'a>(v:&'a Vec<ConfigParser>, name: &'a str) -> Option<&'a ConfigParser> {
+    for p in v {
+        if p.pgrm_name == name {
+            Some(p);
+        }
+    }
+    None
+}
+
+/*originiallyfor cmd  check
+struct Easy_Regex;
+impl Easy_Regex{
+    fn easy_regex(s: String) -> bool {
+        let banned = [" && ", " | ", " ; ", '']
+        let in_pars = false;
+
+    }
+}
+*/
+
+//test this fn
+
 
 impl ConfigParser {
 
@@ -108,7 +130,7 @@ impl ConfigParser {
         //each nb corresponds to the line it has ot be on
         match which{
             "prgm_name" | "0" => r"^prgm_name: [a-zA-Z_0-9]+$",
-            "cmd" | "1"  => r#"^cmd: "([^;]*)"$"#,
+            "cmd" | "1"  => "^cmd: ([^;]*)$",
             "numprocs" | "2"   => r"^numprocs: (10|[1-9])$",
             "umask" | "3"  => r"^umask: [0-7]{3}$",
             "workingdir" | "4" => r"^workingdir: [a-zA-Z0-9._/]+$",
@@ -139,7 +161,17 @@ impl ConfigParser {
         (p1, p2)
     }
 
+    /*
+    fn cmd_parse(cmd: String) -> Result<> {
+        //crate clap 
+        use clap::App;
+        let words = shellwords::split(cmd)?;
+        let matches = App::new("taskmaster_app").get_matches_from(words);
+
+    }*/
+
     fn hashmap_to_ConfigParser(m : &HashMap<String, String>) -> ConfigParser {
+        //deal with unwrap better
         
         //env 
         let mut env  : HashMap<String, String> = HashMap::new();
@@ -153,7 +185,7 @@ impl ConfigParser {
 
         ConfigParser {
             pgrm_name : m.get("prgm_name").unwrap().to_string(),
-            cmd : m.get("cmd").unwrap().to_string(),
+            cmd : shellwords::split(m.get("cmd").unwrap()).unwrap(),
             numprocs: m.get("numprocs").unwrap().parse::<u32>().unwrap(),
             umask: m.get("umask").unwrap().parse::<u32>().unwrap(),
             workingdir: PathBuf::from(m.get("workingdir").unwrap()),
@@ -227,9 +259,9 @@ impl ConfigParser {
         Ok(lines)
     }
 
-    fn str_add(s1 : &str, s2: &str) -> String {
+    /*fn str_add(s1 : &str, s2: &str) -> String {
         format!("{} AND {}", &s1, &s2)
-    }
+    }*/
 
     /*fn duplicate_pgrm_name(v: &Vec<ConfigParser>) {
         let refs_to_field_pgrm_name : Vec<&String> = Vec::with_capacity(v.len()); 
@@ -238,7 +270,7 @@ impl ConfigParser {
         }
     }*/
 
-    fn multi_parse_file(lines : Vec<String>) -> Result<Vec<ConfigParser>, ErrMsg> {
+    pub fn main_parser(lines : Vec<String>) -> Result<Vec<ConfigParser>, ErrMsg> {
         
         let block_size = 16;
         let nb_lines = lines.len();
@@ -296,7 +328,7 @@ impl ConfigParser {
             if line_nb == offset + 0 && !Self::is_regex(r"^prgm_name: [a-zA-Z_0-9]+$", &line) {
                 return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
-            if line_nb == offset + 1 && !Self::is_regex(r#"^cmd: "([^;]*)"$"#, &line) {
+            if line_nb == offset + 1 && !Self::is_regex("^cmd: ([^;]*)$", &line) {
                 return Err(ParserErrsMsgs::new("parse_err" , &line_detail));
             }
             //limit: 1-10
@@ -451,7 +483,7 @@ struct ParserErrsMsgs {
 }*/
 
 #[derive(Debug)]
-struct ErrMsg {
+pub struct ErrMsg {
     name : String, 
     msg : String,
 }
@@ -683,7 +715,7 @@ mod tests {
         //this vec is used(cloned) by all error tests
         let correct_content1 = vec![
             String::from("prgm_name: nginx"),
-            String::from(r#"cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf""#),
+            String::from(r#"cmd: /usr/local/bin/nginx -c "/etc/nginx/test.conf" -x"#),
             String::from("numprocs: 1"),
             String::from("umask: 022"),
             String::from("workingdir: /tmp"),
@@ -702,7 +734,7 @@ mod tests {
 
         let expected_res : ConfigParser = ConfigParser {
             pgrm_name: String::from("nginx"),
-            cmd: String::from(r#""/usr/local/bin/nginx -c /etc/nginx/test.conf""#),
+            cmd: vec!["/usr/local/bin/nginx".to_string(), "-c".to_string(), String::from("/etc/nginx/test.conf"), "-x".to_string()],
             numprocs: 1 as u32,
             umask: 22 as u32,
             workingdir: PathBuf::from("/tmp"),
@@ -730,7 +762,7 @@ mod tests {
 
         assert_eq!(expected_res, res);
 
-        let res = ConfigParser::multi_parse_file(correct_content1.clone());
+        let res = ConfigParser::main_parser(correct_content1.clone());
         match &res {
             Ok(r) => (),
             Err(r) => assert!(false, "{} {}", r.name, r.msg),
@@ -742,7 +774,7 @@ mod tests {
         //from ConfigParser::read_file
         let correct_content_2_prgms = vec![
             String::from("prgm_name: LS"),
-            String::from(r#"cmd: "ls -la""#),
+            String::from(r#"cmd: ls -la "text" -x"#),
             String::from("numprocs: 10"),
             String::from("umask: 777"),
             String::from("workingdir: ./"),
@@ -758,7 +790,7 @@ mod tests {
             String::from("env: V_=0,"),
             String::from(""),
             String::from("prgm_name: LS2"),
-            String::from(r#"cmd: "ls -la""#),
+            String::from(r#"cmd: ls -la "text" -x"#),
             String::from("numprocs: 10"),
             String::from("umask: 777"),
             String::from("workingdir: ./"),
@@ -777,7 +809,7 @@ mod tests {
 
         let expected_res_2_prgms : Vec<ConfigParser> = vec![ConfigParser {
             pgrm_name: String::from("LS"),
-            cmd: String::from(r#"cmd: "ls -la""#),
+            cmd: vec!["ls".to_string(), "-la".to_string(), String::from("text"), "-x".to_string()],
             numprocs: 10 as u32,
             umask: 777 as u32,
             workingdir: PathBuf::from("./"),
@@ -796,7 +828,7 @@ mod tests {
         },
         ConfigParser {
             pgrm_name: String::from("LS2"),
-            cmd: String::from(r#"cmd: "ls -la""#),
+            cmd: vec!["ls".to_string(), "-la".to_string(), String::from("text"), "-x".to_string()],
             numprocs: 10 as u32,
             umask: 777 as u32,
             workingdir: PathBuf::from("./"),
@@ -814,18 +846,19 @@ mod tests {
             ])
         }];
 
-        let res = ConfigParser::multi_parse_file(correct_content_2_prgms.clone());
+        let res = ConfigParser::main_parser(correct_content_2_prgms.clone());
         match &res {
             Ok(r) => (),
             Err(r) => assert!(false, "{} {}", r.name, r.msg),
         };
         let multi_res= res.unwrap();
+        assert_eq!(multi_res,  expected_res_2_prgms.clone());
 
         /////////////////ERROR TESTS 
         //let expected_res_copy = expected_res.clone();
         let mut correct_content_2_prgms_c = correct_content_2_prgms.clone();
         correct_content_2_prgms_c[16] = correct_content_2_prgms_c[0].clone();
-        let res = ConfigParser::multi_parse_file(correct_content_2_prgms_c);
+        let res = ConfigParser::main_parser(correct_content_2_prgms_c);
         match &res {
             Ok(r) => assert!(false, "suppose to fail with same prgm name"),
             Err(r) => assert_eq!(r.name,"prgm_name_exists"),
@@ -841,6 +874,7 @@ mod tests {
 
 
         //TEST: invalid field cmd
+        //let invalid_cmd_ops = r#"";
 
         //TEST: invalid field numprocs
         let invalid_under_numprocs = "0";
