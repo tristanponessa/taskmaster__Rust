@@ -15,21 +15,21 @@ use regex::Regex;
 
 #[derive(PartialEq,Debug,Clone)] //used for tests   Debug so cargo test can display if assert fails   Clone  formultiple borrows
 pub  struct ConfigParser {
-    pgrm_name : String,
-    cmd : Vec<String>,
-    numprocs  : u32,
-    umask  :  u32,
-    workingdir  : PathBuf,
-    autostart  : bool,
-    autorestart  : String,
-    exitcodes  : Vec<u32>,
-    startretries  :  u32,
-    starttime  : u32,
-    stopsignal  : String,
-    stoptime  :  u32,
-    stdout  :  PathBuf,
-    stderr  :  PathBuf,
-    env  : HashMap<String, String>,
+    pub pgrm_name : String,
+    pub cmd : Vec<String>,
+    pub numprocs  : u32,
+    pub umask  :  u32,
+    pub workingdir  : PathBuf,
+    pub autostart  : bool,
+    pub autorestart  : String,
+    pub exitcodes  : Vec<u32>,
+    pub startretries  :  u32,
+    pub starttime  : u32,
+    pub stopsignal  : String,
+    pub stoptime  :  u32,
+    pub stdout  :  PathBuf,
+    pub stderr  :  PathBuf,
+    pub env  : HashMap<String, String>,
 }
 
 //Limits : all global data 
