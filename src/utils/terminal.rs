@@ -48,14 +48,12 @@ pub fn run_terminal() ->  Result<(),Error> {
                 eprintln!("ERROR: failed to read line : {}", e);
                 return Err(e);
         }
-        
-
-        if input == "\n" {
-            continue;
-        }
 
         //Config::parser cmd_args
         let parts : Vec<&str>  = input.trim().split_whitespace().collect();
+		if parts.len() == 0 {
+			continue;
+		}
         let command = *parts.first().unwrap(); //will always  succeed , handled  by prior if condition
         let args = match &parts {
             p if p.len() > 1 => &p[1..],
