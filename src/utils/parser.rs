@@ -564,8 +564,12 @@ mod tests {
     use std::fs::{Permissions, set_permissions};
 
     fn vec_eq(v1: &Vec<String>, v2: &Vec<String>)-> bool {
-        let s1: HashSet<_> = v1.iter().collect(); //copy turns iter that uses refs to owned vals by cloning
-        let s2: HashSet<_> = v2.iter().collect();
+        
+        let mut s1 = v1.clone();
+        let s1: HashSet<_> = s1.drain(..).collect();
+        let mut s2 = v2.clone();
+        let s2: HashSet<_> = s2.drain(..).collect();
+        
         let diff: Vec<_> = s1.difference(&s2).collect();
         diff.len() == 0
     }
