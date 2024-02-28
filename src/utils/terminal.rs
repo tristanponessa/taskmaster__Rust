@@ -31,7 +31,7 @@ fn cmd_help(user_cmds : &[&str]) {
 //}
 
 
-pub fn run_terminal() ->  Result<(),Error> {
+pub async fn run_terminal() ->  Result<(),Error> {
 
     //let cur_config : Option<ConfigParser>  = None;
     let user_cmds = ["help", "config", "load", "start", "restart", "stop", "status", "exit"];
