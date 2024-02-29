@@ -11,8 +11,6 @@ use std::ffi::OsStr;
 use regex::Regex;
 
 
-
-
 #[derive(PartialEq,Debug,Clone)] //used for tests   Debug so cargo test can display if assert fails   Clone  formultiple borrows
 pub  struct Task {
     pub pgrm_name : String,
@@ -94,6 +92,17 @@ impl Task {
             env  : HashMap::from([("STARTED_BY :taskmaster"),("author","trponess")]),
         }
     }*/
+
+
+    //main function
+    pub fn new_fetch_all(file_name : &String) -> Result<Vec<Task>, ErrMsg> {
+        let opened_file = Self::check_file(file_name)?;
+        let lines : Vec<String> = Self::read_file(file_name)?;
+        let a_task : Vec<Task> = Self::main_parser(lines)?;
+        Ok(a_task)
+    }
+
+
 
     //we dont need to check nb threw int, regex does all the work
     fn new_limits() -> Limits {

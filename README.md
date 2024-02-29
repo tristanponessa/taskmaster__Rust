@@ -88,3 +88,11 @@ states
 
 sudo apt install python3-pip
 /home/trps/.local/bin/
+
+
+# Rust IMM.
+everything cant be imm. 
+rust is a systems language and has to guranatee speed 
+functionnal prog. pure funct. copy everything but guaratees reliability 
+in the cost of poformance 
+second rust is very tight in funcitonnality, the only way to make somehting work sometimes is threw mut, the rust core designers or lib designers dont have the choice or want to guaratnee peformance 
