@@ -1,5 +1,7 @@
 use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}};
 use utils::terminal::run_terminal;
+use std::time::Instant;
+use tokio::time::{sleep, Duration};
 use utils::config_parser::*;
 mod utils;
 
@@ -103,39 +105,7 @@ fn run_processes_of_tasks(all_processes_of_tasks : Vec<ProcessOfTask>) -> Vec<Pr
     updated_processes_of_tasks
 }
 
-/*fn make_relative_path(from: &Path, to: &Path) -> String {
-    // Compute the relative path from 'from' to 'to'
-    let relative_path = to.strip_prefix(from)
-        .unwrap_or_else(|_| to)
-        .to_str().unwrap();
 
-
-    "./".to_owned() + relative_path
-}*/
-
-fn cd_into_dir(wd : &PathBuf) {
-    env::set_current_dir(wd).expect("couldn't change dirs");
-}
-
-fn get_cur_dir() -> PathBuf {
-    if let Ok(cwd) = env::current_dir() {
-      cwd  
-    } else {
-        panic!("Failed to get current working directory");
-    }
-}
-use std::fs;
-fn get_absolute(path : &str) -> String {
-    // File or directory path
-    // Get the absolute path
-    if let Ok(absolute_path) = fs::canonicalize(path) {
-        println!("Absolute path: {:?}", absolute_path);
-        String::from(absolute_path.to_str().unwrap())
-    } else {
-        panic!("Failed to get absolute path");
-
-    }
-}
 
 fn env_setup_str(a_task : Task) -> EnvCmd {
 
@@ -143,10 +113,6 @@ fn env_setup_str(a_task : Task) -> EnvCmd {
     let stdout_path = a_task.stdout.to_str().unwrap();
     let stderr_path = a_task.stderr.to_str().unwrap();
 
-    //has to be related to the cd path change at the start of the cmd
-    //let updated_path_stdout = make_relative_path(&(Path::new(&working_path)), &(Path::new(&stdout_path)));
-    //let updated_path_stderr = make_relative_path(&(Path::new(&working_path)), &(Path::new(&stderr_path)));
-    //A = B , C = D hashmap
     let env_cmd : String = a_task.env
         .iter()
         .map(|(key, value)| format!(" {}={} ", key, value)) // Add 10 to each value
@@ -186,6 +152,24 @@ fn create_process_of_task(env_cmd : EnvCmd , a_task : Task) -> ProcessOfTask {
     }
 }
 
+
+/* 
+async fn watcher_time_ran() {
+
+}
+
+async fn async_timer_example(FN TO WATCH) {
+    // Start the timer
+    let start_time = Instant::now();
+
+    //FUNC TO WATCH
+
+    // Measure the elapsed time
+    let elapsed = start_time.elapsed();
+
+    // Print the elapsed time
+    println!("Elapsed time: {:?}", elapsed);
+}*/
 
 
 
@@ -227,7 +211,8 @@ async process_conclusion(AProcessOfTask processed_task) {
 
 
 
-fn main() {
+#[tokio::main]
+async fn main() {
    
     let all_tasks : Vec<Task>;
     let all_processes_of_tasks : Vec<ProcessOfTask>;
@@ -241,16 +226,63 @@ fn main() {
     }
     all_tasks = all_tasks_res.unwrap();
     all_processes_of_tasks = get_all_ProcessOfTask(all_tasks);
-    all_running_processes_of_tasks = run_processes_of_tasks(all_processes_of_tasks);
-
-    for running_process_of_task in all_running_processes_of_tasks.iter() {
+    
+    //RUN SYNCHR.
+    //all_running_processes_of_tasks = run_processes_of_tasks(all_processes_of_tasks);
+    /*for running_process_of_task in all_running_processes_of_tasks.iter() {
         println!("running > {:?}", running_process_of_task.pid);
-    }
-    //set watchers 
+    }*/
     
 
-   
-   
-   
-   // run_terminal();
+    run_terminal();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*fn make_relative_path(from: &Path, to: &Path) -> String {
+    // Compute the relative path from 'from' to 'to'
+    let relative_path = to.strip_prefix(from)
+        .unwrap_or_else(|_| to)
+        .to_str().unwrap();
+
+
+    "./".to_owned() + relative_path
+}*/
+
+/* 
+fn cd_into_dir(wd : &PathBuf) {
+    env::set_current_dir(wd).expect("couldn't change dirs");
+}
+
+fn get_cur_dir() -> PathBuf {
+    if let Ok(cwd) = env::current_dir() {
+      cwd  
+    } else {
+        panic!("Failed to get current working directory");
+    }
+}
+use std::fs;
+fn get_absolute(path : &str) -> String {
+    // File or directory path
+    // Get the absolute path
+    if let Ok(absolute_path) = fs::canonicalize(path) {
+        println!("Absolute path: {:?}", absolute_path);
+        String::from(absolute_path.to_str().unwrap())
+    } else {
+        panic!("Failed to get absolute path");
+
+    }
+}*/
