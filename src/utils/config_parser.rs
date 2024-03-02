@@ -18,7 +18,7 @@ use regex::Regex;
 pub struct Taskmaster_Env {
     pub all_tasks : Vec<Task>,
     pub all_processes_of_tasks : Vec<ProcessOfTask>,
-    pub all_running_processes_of_tasks : Vec<ProcessOfTask>,
+    //pub all_running_processes_of_tasks : Vec<ProcessOfTask>,
 }
 
 /* 
@@ -677,7 +677,6 @@ pub fn get_all_ProcessOfTask(all_tasks : Vec<Task>) -> Vec<ProcessOfTask>  {
     for a_task in all_tasks.iter() {
         for i in 0..a_task.numprocs {
             let env_cmd = env_setup_str(a_task.clone());
-            println!("CMD {}", env_cmd);
             let new_ProcessOfTask = create_process_of_task(env_cmd , a_task.clone()); //OR AProcessOfTask.new(atask)
             all_processes_of_tasks.push(new_ProcessOfTask);
         }
@@ -685,7 +684,7 @@ pub fn get_all_ProcessOfTask(all_tasks : Vec<Task>) -> Vec<ProcessOfTask>  {
     all_processes_of_tasks
 }
 
-pub fn run_process_of_task(mut process_task : ProcessOfTask) -> Result<ProcessOfTask, io::Error> {
+pub fn run_process_of_task(process_task : &mut ProcessOfTask) -> Result<ProcessOfTask, io::Error> {
     /* the process is not running, once you run it, it will have a pid , and the other fields will be updated  */
     //we dont want to modify the old one so we clone   but it dont implement it ......
 
@@ -702,11 +701,10 @@ pub fn run_process_of_task(mut process_task : ProcessOfTask) -> Result<ProcessOf
     })
 }
 
-pub fn run_processes_of_tasks(all_processes_of_tasks : Vec<ProcessOfTask>) -> Vec<ProcessOfTask> {
+pub fn run_processes_of_tasks(mut all_processes_of_tasks : Vec<ProcessOfTask>) -> Vec<ProcessOfTask> {
     /* into iter drains all elems to be moved inside run_process_of_task and have it return an updated version  */
     let mut updated_processes_of_tasks : Vec<ProcessOfTask> = vec![];
-    for a_process_of_task in all_processes_of_tasks.into_iter() {
-        println!("wanna run > {}", a_process_of_task.task_name);
+    for a_process_of_task in all_processes_of_tasks.iter_mut() {
         let running_process_of_task = run_process_of_task(a_process_of_task).unwrap();
         updated_processes_of_tasks.push(running_process_of_task);
     }
@@ -725,7 +723,7 @@ pub fn env_setup_str(a_task : Task) -> EnvCmd {
         .iter()
         .map(|(key, value)| format!(" {}={} ", key, value)) // Add 10 to each value
         .collect();
-    let cmd = format!("export {} && umask {} && (cd {:?} && bash {}) >> {:?} 2>> {:?}", env_cmd, 
+    let cmd = format!("export {} && umask {} && (cd {:?} && {}) >> {:?} 2>> {:?}", env_cmd, 
                                 a_task.umask,
                                 working_path,
                                 a_task.cmd.join(" "),

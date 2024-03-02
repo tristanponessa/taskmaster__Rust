@@ -55,18 +55,30 @@ fn flush_stdout() {
 
 fn load_config(taskmaster_env : Taskmaster_Env, config_path : String) -> Taskmaster_Env {
     //PROCESSES CONTROLLER 
-    let all_tasks : Vec<Task>;
-    let all_processes_of_tasks : Vec<ProcessOfTask>;
-    let all_running_processes_of_tasks : Vec<ProcessOfTask>;
+    let mut all_tasks : Vec<Task>;
+    let mut all_processes_of_tasks : Vec<ProcessOfTask>;
+    //let all_running_processes_of_tasks : Vec<ProcessOfTask>;
 
     let config_file = config_path.as_str();
     let all_tasks_res = Task::new_fetch_all(&String::from(config_file));
-    if all_tasks_res.is_err() {
-        panic!("{:?}", all_tasks_res.unwrap());
+    match all_tasks_res {
+
+        Ok(all_tasks) => {
+            all_processes_of_tasks = get_all_ProcessOfTask(all_tasks.clone());
+            Taskmaster_Env {
+                all_tasks : all_tasks.clone(),
+                all_processes_of_tasks,
+                //all_running_processes_of_tasks : vec![],
+            }
+        }
+        Err(e) => { 
+            println!("{:?}", e);
+            taskmaster_env
+        }
+        
+    
         
     }
-    all_tasks = all_tasks_res.unwrap();
-    all_processes_of_tasks = get_all_ProcessOfTask(all_tasks.clone());
 
     //now check which ones were changed compared to previous load , if so kill them
     //look at task env 
@@ -74,20 +86,18 @@ fn load_config(taskmaster_env : Taskmaster_Env, config_path : String) -> Taskmas
     //
     //
 
-    Taskmaster_Env {
-        all_tasks : all_tasks.clone(),
-        all_processes_of_tasks,
-        all_running_processes_of_tasks : vec![],
-    }
+    
     
 
 }
 
 
 
-fn status(taskmaster_env : &Taskmaster_Env) {
+fn status_debug(taskmaster_env : &Taskmaster_Env) {
 
     println!("{:?}", taskmaster_env.all_tasks);
+    println!("{:?}", taskmaster_env.all_processes_of_tasks);
+    //println!("{:?}", taskmaster_env.all_running_processes_of_tasks);
 
 }
 
@@ -111,6 +121,30 @@ fn get_user_input() -> Terminal_Cmd {
         }
 }
 
+fn get_program_names(taskmaster_env : &Taskmaster_Env) -> Vec<String> {
+    taskmaster_env.all_tasks.iter().map(|a_task : &Task| a_task.pgrm_name.clone()).collect()
+}
+
+fn get_index_task_and_processOfTask_for_program(taskmaster_env : &Taskmaster_Env, program_name : String) -> Option<usize> {
+    let indx : Vec<usize> = taskmaster_env.all_tasks.iter()
+                            .enumerate()
+                            .filter_map(|(idx, a_task)| 
+                                    if a_task.pgrm_name.clone() == program_name {Some(idx)} else {None})
+                            .collect();
+    if indx.len() > 0 {
+        return Some(*indx.get(0).unwrap()); //take any
+    }
+    None    
+}
+/*fn get_task_and_processOfTask_for_program(taskmaster_env : &Taskmaster_Env, program_name : String) -> (Task, ProcessOfTask) {
+    for (a_task, a_task_of_process) in taskmaster_env.all_tasks.iter().zip(taskmaster_env.all_processes_of_tasks.iter()) {
+        
+    }
+}*/
+
+
+
+
 
 fn handle_user_input(taskmaster_env : Taskmaster_Env, possible_cmds : &Vec<&str>, user_input : Terminal_Cmd) -> (LoopSignal, Taskmaster_Env) {
     match user_input.cmd.as_str() {
@@ -123,8 +157,28 @@ fn handle_user_input(taskmaster_env : Taskmaster_Env, possible_cmds : &Vec<&str>
             }
             (String::from("continue"), taskmaster_env)
         }
-        "status" => {
-            status(&taskmaster_env);
+        "run" => {
+            if user_input.args.len() == 1 {
+                let input_program_name = user_input.args.get(0).unwrap();
+                let idx : Option<usize>  = get_index_task_and_processOfTask_for_program(&taskmaster_env, input_program_name.clone());
+                match idx {
+                    Some(idx) => {
+                        let processOfTask_for_program : &mut ProcessOfTask = &mut taskmaster_env.all_processes_of_tasks.into_iter().nth(idx).unwrap(); //get(idx).unwrap();
+                        run_process_of_task(processOfTask_for_program);
+                        //IM STUCK
+                    },
+                    None => {
+                        let program_names = get_program_names(&taskmaster_env);
+                        println!("{} program don't exist, ones that do : {:?}", input_program_name, program_names);
+                    }
+                }
+                return (String::from("continue"), taskmaster_env);
+            }
+            //if none run all
+            (String::from("continue"), taskmaster_env)
+        }
+        "status_debug" => {
+            status_debug(&taskmaster_env);
             (String::from("continue"), taskmaster_env)
         },
         //"start" => {},
@@ -157,7 +211,7 @@ pub fn run_terminal() {
 
     let mut taskmaster_env : Taskmaster_Env = Taskmaster_Env { all_tasks: vec![], 
         all_processes_of_tasks: vec![], 
-        all_running_processes_of_tasks: vec![] 
+        //all_running_processes_of_tasks: vec![] 
     };
     let mut loop_signal : LoopSignal;
 
