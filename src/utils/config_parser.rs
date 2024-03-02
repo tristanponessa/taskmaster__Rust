@@ -5,6 +5,7 @@ use std::collections::{HashMap};
 */
 
 
+use std::env;
 use std::fs::{File, read_to_string};
 use std::path::{Path, PathBuf}; //Path::new -> &Path plus needs Box<&Path> since it's unsized (don't implement Sized), Box or & or PathBuf(like an owned Path)  fixes it
 use std::ffi::OsStr;
@@ -96,10 +97,22 @@ impl Task {
 
     //main function
     pub fn new_fetch_all(file_name : &String) -> Result<Vec<Task>, ErrMsg> {
-        let opened_file = Self::check_file(file_name)?;
+        let opened_file = Self::check_file(file_name, None)?;
         let lines : Vec<String> = Self::read_file(file_name)?;
         let a_task : Vec<Task> = Self::main_parser(lines)?;
         Ok(a_task)
+    }
+
+    fn cd_into_dir(wd : &PathBuf) {
+        env::set_current_dir(wd).expect("couldn't change dirs");
+    }
+
+    fn get_cur_dir() -> PathBuf {
+        if let Ok(cwd) = env::current_dir() {
+          cwd  
+        } else {
+            panic!("Failed to get current working directory");
+        }
     }
 
 
@@ -212,7 +225,15 @@ impl Task {
     }
 
     //subs fns
-    fn check_file(file_name : &String) -> Result<File, ErrMsg> {
+    fn check_file(file_name : &String, maybe_working_dir : Option<PathBuf>) -> Result<File, ErrMsg> {
+        //if working dir provided, you cd into it, so the file name which is a reltaive path to working dir works 
+
+        /*let current_dir = Self::get_cur_dir();
+        let working_dir : PathBuf;
+        if maybe_working_dir.is_some() {
+            working_dir = maybe_working_dir.clone().unwrap();
+            Self::cd_into_dir(&working_dir);
+        }*/
 
         let path = Path::new(file_name);
         let FileErrMsgs = FileErrMsgs::new_default();
@@ -248,6 +269,10 @@ impl Task {
                 return Err(ErrMsg { name: String::from("file_size_invalid"), msg:FileErrMsgs.file_size_invalid.replace("{}", size.to_string().as_str())})
             }
         }
+
+        /*if maybe_working_dir.is_some() {
+            Self::cd_into_dir(&current_dir);
+        }*/
 
         Ok(opened_file)
     }
@@ -568,9 +593,13 @@ impl ParserErrsMsgs {
 mod tests {
     use super::*;
     use std::collections::HashSet;
+    use std::env;
     use std::hash::Hash;
     use std::os::unix::fs::PermissionsExt;
     use std::fs::{Permissions, set_permissions};
+
+
+    
 
     fn vec_eq(v1: &Vec<String>, v2: &Vec<String>)-> bool {
         
@@ -598,7 +627,7 @@ mod tests {
             msg : FileErrMsgs::get(errmsg_field)
         };
 
-        let r = Task::check_file(file_name);
+        let r = Task::check_file(file_name, None);
         match r {
             Ok(_) => assert!(false, "was suppose to return Err(errmsg)"),
             Err(errmsg) => assert_cmp_err(&expected_errmsg, &errmsg),
@@ -606,7 +635,7 @@ mod tests {
     }
     
     fn assert_check_right_file(file_name: &String) {
-        let r = Task::check_file(file_name);
+        let r = Task::check_file(file_name, None);
         assert!(r.is_ok());
     }
 
@@ -722,7 +751,7 @@ mod tests {
             
         */
 
-
+        
 
         //from Task::read_file
         //this vec is used(cloned) by all error tests
@@ -731,7 +760,7 @@ mod tests {
             String::from(r#"cmd: /usr/local/bin/nginx -c "/etc/nginx/test.conf" -x"#),
             String::from("numprocs: 1"),
             String::from("umask: 022"),
-            String::from("workingdir: /tmp"),
+            String::from("workingdir: ./test_docs"),
             String::from("autostart: true"),
             String::from("autorestart: unexpected"),
             String::from("exitcodes: 0,2,"),
@@ -750,7 +779,7 @@ mod tests {
             cmd: vec!["/usr/local/bin/nginx".to_string(), "-c".to_string(), String::from("/etc/nginx/test.conf"), "-x".to_string()],
             numprocs: 1 as u32,
             umask: 22 as u32,
-            workingdir: PathBuf::from("/tmp"),
+            workingdir: PathBuf::from("./test_docs"),
             autostart: true,
             autorestart: String::from("unexpected"),
             exitcodes: vec![0 as u32,2 as u32],
@@ -765,6 +794,8 @@ mod tests {
                 (String::from("ANSWER"), String::from("42")),
             ])
         };
+
+        //Task::cd_into_dir(&expected_res.workingdir);
 
         let res = Task::parse_file(correct_content1.clone());
         match &res {
@@ -858,6 +889,8 @@ mod tests {
                 (String::from("V_"), String::from("0")),
             ])
         }];
+
+        //Task::cd_into_dir(&expected_res_2_prgms.get(0).unwrap().workingdir);
 
         let res = Task::main_parser(correct_content_2_prgms.clone());
         match &res {

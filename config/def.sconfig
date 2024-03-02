@@ -1,31 +1,15 @@
 prgm_name: nginx
-cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf"
-numprocs: 1
-umask: 022
-workingdir: /tmp
+cmd: ../scripts/create_private_dirs.sh
+numprocs: 3
+umask: 077
+workingdir: ./test_docs
 autostart: true
 autorestart: unexpected
 exitcodes: 0,2,
-startretries: 3
+startretries: 0
 starttime: 5
 stopsignal: SIGTERM
 stoptime: 10
 stdout: ./test_docs/parser_tests/file.stdout
 stderr: ./test_docs/parser_tests/file.stderr
-env: STARTED_BY=taskmaster,ANSWER=42,
-
-prgm_name: nginxB
-cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf"
-numprocs: 1
-umask: 022
-workingdir: /tmp
-autostart: true
-autorestart: unexpected
-exitcodes: 0,2,
-startretries: 3
-starttime: 5
-stopsignal: SIGTERM
-stoptime: 10
-stdout: ./test_docs/parser_tests/file.stdout
-stderr: ./test_docs/parser_tests/file.stderr
-env: STARTED_BY=taskmaster,ANSWER=42,
+env: STARTED_BY=tasker,ANSWER=42,

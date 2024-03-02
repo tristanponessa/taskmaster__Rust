@@ -1,0 +1,15 @@
+prgm_name: nginx
+cmd: ../scripts/create_private_dirs.sh
+numprocs: 3
+umask: 077
+workingdir: ./test_docs
+autostart: true
+autorestart: unexpected
+exitcodes: 0,2,
+startretries: 0
+starttime: 5
+stopsignal: SIGTERM
+stoptime: 10
+stdout: ./parser_tests/file.stdout
+stderr: ./parser_tests/file.stderr
+env: STARTED_BY=tasker,ANSWER=42,
