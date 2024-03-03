@@ -1,6 +1,7 @@
 
 use std::clone;
 use std::collections::{HashMap};
+use procfs::process::{Process, ProcessError};
 /*
     add stdout stderr : sys stdout insteadof file 
 */
@@ -12,6 +13,7 @@ use std::ffi::OsStr;
 use tokio::time::{sleep, Duration};
 use std::time::Instant;
 use regex::Regex;
+use std::process;
 
 
 
@@ -663,9 +665,35 @@ type EnvCmd = String;
 //static mut ALL_TASKS : Vec<Task> = vec![];
 //static mut ALL_PROCESS_OF_TASKS : Vec<ProcessOfTask> = vec![];
 
+
+/*fn get_command_handler_from_pid(pid: i32) -> Option<Command> {
+    let process = Process::new(pid);
+    let process = match process {
+        Ok(process) => {
+            process
+        }   
+        Err(e) => {
+            eprintln!("Error: {:?}", e);
+            return None;
+        }
+    }
+    match process.cmdline() {
+        Ok(command) => {  
+            //println!("Command of PID {}: {}", pid, command);
+            Some(command)
+        }
+        Err(err) =>  {
+            eprintln!("Error: {:?}", err);
+            None
+        }
+    }
+}*/
+
+static mut ALL_HANDLERS : HashMap<String, Command> = HashMap::new();
+
 #[derive(Debug)]
 pub struct ProcessOfTask {
-    handler: Command,
+    //handler: Command,
     task_name : String,
     pid: Option<u32>,
     final_exit_code: Option<i32>,
@@ -684,16 +712,17 @@ pub fn get_all_ProcessOfTask(all_tasks : Vec<Task>) -> Vec<ProcessOfTask>  {
     all_processes_of_tasks
 }
 
-pub fn run_process_of_task(process_task : &mut ProcessOfTask) -> Result<ProcessOfTask, io::Error> {
+pub fn run_process_of_task(program_name : String) -> Result<ProcessOfTask, io::Error> {
     /* the process is not running, once you run it, it will have a pid , and the other fields will be updated  */
     //we dont want to modify the old one so we clone   but it dont implement it ......
 
     //RUNS status() runs cmd
-    let exit_status : io::Result<ExitStatus> = process_task.handler.status(); 
+    let exit_status : io::Result<ExitStatus> = ALL_HANDLERS.get(program_name).status(); 
     let exit_status_code = exit_status?.code();
     //let exit_code : Option<usize> = if exit_status.is_ok() { Some(exit_status.unwrap().code().unwrap()) } else  { None }; //if fails immediatly 
+    ALL_HANDLERS.insert(k, v)
     Ok(ProcessOfTask {
-        handler : process_task.handler,
+        //handler : process_task.handler,
         pid : Some(std::process::id()), //gets current running process ... lets hope it refers this one 
         nb_restarted : 0,
         final_exit_code: exit_status_code,

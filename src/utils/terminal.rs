@@ -163,9 +163,17 @@ fn handle_user_input(taskmaster_env : Taskmaster_Env, possible_cmds : &Vec<&str>
                 let idx : Option<usize>  = get_index_task_and_processOfTask_for_program(&taskmaster_env, input_program_name.clone());
                 match idx {
                     Some(idx) => {
-                        let processOfTask_for_program : &mut ProcessOfTask = &mut taskmaster_env.all_processes_of_tasks.into_iter().nth(idx).unwrap(); //get(idx).unwrap();
-                        run_process_of_task(processOfTask_for_program);
-                        //IM STUCK
+                        let mut processOfTask_for_program: ProcessOfTask;
+                        //for i in 0..idx {
+                        processOfTask_for_program = *taskmaster_env.all_processes_of_tasks.get(idx).unwrap();
+                        //}
+                        run_process_of_task(&mut processOfTask_for_program);
+                        return (String::from("continue"), taskmaster_env);
+                        
+
+                        //let processOfTask_for_program : &mut ProcessOfTask = &mut taskmaster_env.all_processes_of_tasks.into_iter().nth(idx).unwrap(); //get(idx).unwrap();
+                        
+                        
                     },
                     None => {
                         let program_names = get_program_names(&taskmaster_env);
