@@ -3,7 +3,8 @@ while true
 do
 	# Echo current date to stdout
 	echo `date`
+	echo $STARTED_BY
 	# Echo 'error!' to stderr
-	echo 'error!' >&2
+	echo 'pretend error!' >&2
 	sleep 1
 done

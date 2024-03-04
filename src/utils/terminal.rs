@@ -60,7 +60,7 @@ fn load_config(taskmaster_env : Taskmaster_Env, config_path : String) -> Taskmas
     //let all_running_processes_of_tasks : Vec<ProcessOfTask>;
 
     let config_file = config_path.as_str();
-    let all_tasks_res = Task::new_fetch_all(&String::from(config_file));
+    let all_tasks_res = Task::from_config(&String::from(config_file));
     match all_tasks_res {
 
         Ok(all_tasks) => {

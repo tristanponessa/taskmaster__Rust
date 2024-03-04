@@ -1,0 +1,15 @@
+prgm_name: show_dir 
+cmd: ls -la 
+numprocs: 3
+umask: 077
+workingdir: ./test_docs
+autostart: true
+autorestart: unexpected
+exitcodes: 0,2,
+startretries: 0
+starttime: 5
+stopsignal: SIGTERM
+stoptime: 10
+stdout: ./test_docs/parser_tests/file.stdout
+stderr: ./test_docs/parser_tests/file.stderr
+env: STARTED_BY=tasker,ANSWER=42,

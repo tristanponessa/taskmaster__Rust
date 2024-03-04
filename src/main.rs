@@ -1,5 +1,5 @@
 use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}};
-use utils::terminal::run_terminal;
+//use utils::terminal::run_terminal;
 use std::time::Instant;
 use tokio::time::{sleep, Duration};
 use utils::config_parser::*;
@@ -120,7 +120,7 @@ async fn main() {
     }*/
     
 
-    run_terminal();
+    //run_terminal();
 }
 
 

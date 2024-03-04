@@ -9,7 +9,8 @@ edition = "2021"
 regex = "1"
 shellwords = "1.1.0"
 tokio = { version = "1.0", features = ["full"] }
-procfs = "0.16.0"
+#procfs = "0.16.0"
+chrono = "0.4"
 
 [profile.release]
 panic = 'unwind'

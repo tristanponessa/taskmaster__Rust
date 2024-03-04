@@ -1,0 +1,15 @@
+prgm_name: forever
+cmd: bash ../scripts/forever.sh
+numprocs: 3
+umask: 077
+workingdir: ./log
+autostart: true
+autorestart: unexpected
+exitcodes: 0,2,
+startretries: 0
+starttime: 5
+stopsignal: SIGTERM
+stoptime: 10
+stdout: ./log/script_stdout
+stderr: ./log/script_stdout
+env: STARTED_BY=tasker,ANSWER=42,
