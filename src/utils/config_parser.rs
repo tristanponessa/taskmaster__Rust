@@ -10,8 +10,9 @@ use std::collections::{HashMap};
 use std::fs::{File, read_to_string};
 use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}}; //Path::new -> &Path plus needs Box<&Path> since it's unsized (don't implement Sized), Box or & or PathBuf(like an owned Path)  fixes it
 use std::ffi::OsStr;
-use tokio::time::{sleep, Duration};
 use std::time::Instant;
+use std::time::Duration;
+use std::thread::sleep;
 use regex::Regex;
 use std::process;
 use crate::utils::process::ProcessOfTask;

@@ -1,15 +1,16 @@
 
 
-use std::clone;
+use std::{clone, thread};
 use std::collections::{HashMap};
 use std::hash::Hash;
 use std::io::Write;
 use chrono::Local;
 
-use std::fs::{File, read_to_string};
+use std::fs::{read_to_string, File, OpenOptions};
 use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}}; //Path::new -> &Path plus needs Box<&Path> since it's unsized (don't implement Sized), Box or & or PathBuf(like an owned Path)  fixes it
 use std::ffi::OsStr;
-use tokio::time::{sleep, Duration};
+use std::time::Duration;
+use std::thread::sleep;
 use std::time::Instant;
 use regex::Regex;
 use std::process;
@@ -199,12 +200,14 @@ impl<'a> ProcessOfTask<'a>{
         cmd
     }
 
-    pub async fn run(&mut self) {
+    pub  fn run(&mut self) {
         /* the process is not running, once you run it, it will have a pid , and the other fields will be updated  */
         //we dont want to modify the old one so we clone   but it dont implement it ......
-
+        self.eprintln_dev_err(String::from("XQ"));
+        self.write_dev_msg(String::from("XQ"));
+        self.write_dev_err(String::from("XQ"));
         //RUNS status() runs cmd
-        let exit_status_res : io::Result<ExitStatus> = self.handler.status(); 
+        let exit_status_res : io::Result<ExitStatus> = self.handler.status(); //blocks 
         match exit_status_res {
             Ok(exit_status) => {
                 let exit_status_code_option : Option<i32> = exit_status.code();
@@ -224,9 +227,9 @@ impl<'a> ProcessOfTask<'a>{
         }    
     }
 
-    async fn stop_timer_before_sigkill(&mut self, pid : u32) {
+     fn stop_timer_before_sigkill(&mut self, pid : u32) {
         let duration = Duration::from_secs(self.task_ref.stoptime as u64); //conversion safe as max u32 fits u64
-        sleep(duration).await;
+        sleep(duration);
         let kill_cmd = format!("kill -9 {}", pid); //SIGKILL
         let mut handler = Self::new_bash_cmd(kill_cmd);
         let ran_cmd_res = handler.status(); //a kill fails? come on
@@ -236,7 +239,7 @@ impl<'a> ProcessOfTask<'a>{
         }
     }
 
-    pub async fn stop(&mut self) {
+    pub  fn stop(&'static mut self) {
      /* 
             write somewhere if exited gracefully
             if dont stop after $stoptime   SIGKILL
@@ -257,7 +260,12 @@ impl<'a> ProcessOfTask<'a>{
                 let mut handler = Self::new_bash_cmd(stop_cmd);
                 let ran_cmd_res = handler.status();
                 match ran_cmd_res {
-                    Ok(_) => self.stop_timer_before_sigkill(pid).await,
+                    Ok(_) => {
+                        let _ = thread::spawn(move || {
+                            self.stop_timer_before_sigkill(pid);
+                        });
+                        
+                    }
                     Err(e) => self.write_dev_err(e.to_string())
                 }
                 //write somewhere if failed to stop 
@@ -280,14 +288,20 @@ impl<'a> ProcessOfTask<'a>{
     
     
     fn write_to_log(&mut self, which : &str, data : String) {
+        let data : String = data + "\n";
         /* i can't write to log the open/write to log errors so i can only print them out on stderr */
+        
         let log_to_write = if which == "err" { &self.log_file_err } else { &self.log_file_out };
-        let mut file_opened_res = File::create(log_to_write);
+        println!("{}", log_to_write);
+        let file_opened_res = OpenOptions::new()
+                                                    .create(true)
+                                                    .append(true)
+                                                    .open(log_to_write);
         match file_opened_res {
             Ok(mut file_opened) => {
                 let write_res = file_opened.write_all(data.as_bytes());
                 match write_res {
-                    Ok(write_res) => {
+                    Ok(_) => {
                         // Optional: Flush the buffer to ensure data is written immediately
                         let flush_res = file_opened.flush();
                         match flush_res {
@@ -360,11 +374,11 @@ impl<'a> ProcessOfTask<'a>{
     */
 }
 /* 
-async fn watcher_time_ran() {
+ fn watcher_time_ran() {
 
 }
 
-async fn async_timer_example(FN TO WATCH) {
+ fn _timer_example(FN TO WATCH) {
     // Start the timer
     let start_time = Instant::now();
 
@@ -384,17 +398,17 @@ set_watchers() {
 
 }
 
-async watcher_signal() {
+ watcher_signal() {
     /* when a signal is triggered  */
 }
 
 //launch at graceful stp 
-async watcher_wait_before_kill {
+ watcher_wait_before_kill {
     /* at stop, if the prcoess hasn't exited gracefully, KILL  */
 }
 
 
-async process_conclusion(AProcessOfTask processed_task) {
+ process_conclusion(AProcessOfTask processed_task) {
     /* is the return signal the right code? graceful exit ?*/
 
     // Check if the command was successful
@@ -419,8 +433,10 @@ async process_conclusion(AProcessOfTask processed_task) {
 mod process_test {
 
     use std::{collections::HashMap, process::Command, time::Duration};
+    
+    use std::thread::sleep;
 
-    use tokio::time::sleep;
+    
 
     use crate::{utils::process::ProcessOfTask, Task};
 

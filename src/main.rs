@@ -1,7 +1,6 @@
 use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}};
 //use utils::terminal::run_terminal;
 use std::time::Instant;
-use tokio::time::{sleep, Duration};
 use utils::config_parser::*;
 mod utils;
 
@@ -51,11 +50,11 @@ FOR EVERY CMD (CMD * NB PROCESSUS COUNTS AS N CMDS )
 
 
 /* 
-async fn watcher_time_ran() {
+ fn watcher_time_ran() {
 
 }
 
-async fn async_timer_example(FN TO WATCH) {
+ fn _timer_example(FN TO WATCH) {
     // Start the timer
     let start_time = Instant::now();
 
@@ -75,17 +74,17 @@ set_watchers() {
 
 }
 
-async watcher_signal() {
+ watcher_signal() {
     /* when a signal is triggered  */
 }
 
 //launch at graceful stp 
-async watcher_wait_before_kill {
+ watcher_wait_before_kill {
     /* at stop, if the prcoess hasn't exited gracefully, KILL  */
 }
 
 
-async process_conclusion(AProcessOfTask processed_task) {
+ process_conclusion(AProcessOfTask processed_task) {
     /* is the return signal the right code? graceful exit ?*/
 
     // Check if the command was successful
@@ -108,8 +107,8 @@ async process_conclusion(AProcessOfTask processed_task) {
 
 
 
-#[tokio::main]
-async fn main() {
+
+ fn main() {
    
     
     
