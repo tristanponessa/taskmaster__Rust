@@ -1,6 +1,5 @@
 
 
-use std::fmt::format;
 use std::{clone, thread};
 use std::collections::{HashMap};
 use std::hash::Hash;
@@ -14,7 +13,7 @@ use std::time::Duration;
 use std::thread::sleep;
 use std::time::Instant;
 use regex::Regex;
-use std::process::{self, Child};
+use std::process;
 
 use crate::*;
 
@@ -102,7 +101,6 @@ pub struct ProcessOfTask<'a> {
     handler: Command,
     cmd : String,
     task_ref : &'a Task,
-    ppid : Option<u32>,
     pid: Option<u32>,
     final_exit_code: Option<i32>,
     nb_restarted : usize,
@@ -137,7 +135,6 @@ impl<'a> ProcessOfTask<'a>{
             handler : command,
             cmd : build_cmd,
             task_ref : a_task,
-            ppid : None,
             pid : None,
             nb_restarted : 0,
             final_exit_code: None,
@@ -174,50 +171,6 @@ impl<'a> ProcessOfTask<'a>{
         command
     }
 
-    fn get_ppid(&mut self, child_pid : u32) -> Option<u32> {
-        /*let handler = Self::new_bash_cmd(format!("ps -o ppid= {}", child_pid));
-        let exit_status_res = handler.status();
-        match exit_status_res {
-            Ok(handler) => {
-                //get output of exit syayius
-            }
-            Err(e)_ => self.write_dev_err(e.to_string());
-        }*/
-
-        // Execute a command and capture its output
-        //format!("ps -o ppid= {}", child_pid)
-        let command_output_res = Command::new("ps")
-        .args(vec!["-o", "ppid=", &child_pid.to_string()])
-        .output();
-        
-        match command_output_res {
-            Ok(output) => {
-                let s = String::from_utf8_lossy(&output.stdout);
-                let s = s.clone().into_owned();
-                let s : String = s.split_whitespace().collect();
-                self.write_dev_err(s.clone());
-                let string_to_u32_res = s.parse::<u32>();
-                match string_to_u32_res {
-                    Ok(c) => return Some(c),
-                    Err(e) => {
-                        
-                        self.write_dev_err(e.to_string());
-                        return None;
-                    }
-                }
-            },
-            Err(e) => {
-                self.write_dev_err(e.to_string());
-                return None;
-            }
-        }
-
-        // Access the captured output and exit status
-        //println!("Command output: {:?}", command_output.stdout);
-        //println!("Command error: {:?}", command_output.stderr);
-        //println!("Exit status: {:?}", command_output.status);
-    }
-
     pub fn cmd_builder(a_task : &Task) -> BuildCmd {
 
         let working_path = a_task.workingdir.to_str();
@@ -248,23 +201,17 @@ impl<'a> ProcessOfTask<'a>{
     }
 
     pub  fn run(&mut self) {
-
-        /* needs parent PID , theres a process for the build cmd and another for the script launched, if you close the launched script , it closes the others but not the other way around  */
-
         /* the process is not running, once you run it, it will have a pid , and the other fields will be updated  */
         //we dont want to modify the old one so we clone   but it dont implement it ......
+        self.eprintln_dev_err(String::from("XQ"));
+        self.write_dev_msg(String::from("XQ"));
+        self.write_dev_err(String::from("XQ"));
         //RUNS status() runs cmd
-        let cmd_spawned_res : io::Result<Child> = self.handler.spawn(); //blocks 
-        match cmd_spawned_res {
-            Ok(cmd_spawned) => {
-                let cmd_spawned_pid : u32 = cmd_spawned.id();
-                let cmd_spawned_ppid_opt : Option<u32> = self.get_ppid(cmd_spawned_pid);
-                self.is_running = true;
-                self.pid = Some(cmd_spawned_pid);
-                self.ppid = cmd_spawned_ppid_opt;
-                self.write_dev_msg(format!("{} [PPID: {:?}][PID: {}] is now running <{}>", self.task_ref.pgrm_name, cmd_spawned_ppid_opt,cmd_spawned_pid,self.cmd));
-
-                /*match cmd_spawned_code_option {
+        let exit_status_res : io::Result<ExitStatus> = self.handler.status(); //blocks 
+        match exit_status_res {
+            Ok(exit_status) => {
+                let exit_status_code_option : Option<i32> = exit_status.code();
+                match exit_status_code_option {
                     Some(exit_code) => {
                         self.final_exit_code = Some(exit_code);
                         self.write_dev_msg(format!("{} [PID: {}] <{}> stopped with exitcode {}", self.task_ref.pgrm_name,self.pid.unwrap(), self.cmd, self.final_exit_code.unwrap()));
@@ -274,7 +221,7 @@ impl<'a> ProcessOfTask<'a>{
                         self.is_running = true;
                         self.write_dev_msg(format!("{} [PID: {}] <{}> is now running", self.task_ref.pgrm_name, self.cmd,self.pid.unwrap()));
                     }
-                }*/
+                }
             }
             Err(e) => self.write_dev_err(e.to_string())
         }    
@@ -292,7 +239,7 @@ impl<'a> ProcessOfTask<'a>{
         }
     }
 
-    pub  fn stop(&mut self) {
+    pub  fn stop(&'static mut self) {
      /* 
             write somewhere if exited gracefully
             if dont stop after $stoptime   SIGKILL
@@ -311,9 +258,7 @@ impl<'a> ProcessOfTask<'a>{
             Some(pid) => {
                 let stop_cmd = format!("kill {}", pid); //SIGTERM
                 let mut handler = Self::new_bash_cmd(stop_cmd);
-                self.write_dev_msg(format!("wanna stop {}  PPID {:?} PID {} with parent pid ", self.task_ref.pgrm_name , self.ppid, pid));
-                /* 
-                let ran_cmd_res = handler.spawn();
+                let ran_cmd_res = handler.status();
                 match ran_cmd_res {
                     Ok(_) => {
                         let _ = thread::spawn(move || {
@@ -324,13 +269,11 @@ impl<'a> ProcessOfTask<'a>{
                     Err(e) => self.write_dev_err(e.to_string())
                 }
                 //write somewhere if failed to stop 
-                */
+                
 
 
             },
-            None => {
-                self.write_dev_err(format!("wanna stop {}, but no PID assigned  self.pid None? {}", self.task_ref.pgrm_name , self.pid.is_none()));
-            }    
+            None => (),    
         }
         
 
@@ -556,7 +499,7 @@ mod process_test {
         //theory : Task struct exists but we wanna test independ.   the fns take a core struct , Task uses a to_that_core_struct() method to be used in this fn
         //let program_cmd_from_config_file = format!("export {} && umask {} && (cd {:?} && {}) >> {:?} 2>> {:?}");
         let task_forever_vec = Task::from_config(&String::from("./config/forever.sconfig")).unwrap();
-        let task_forever : &Task = task_forever_vec.get(0).unwrap();
+        let task_forever = task_forever_vec.get(0).unwrap();
         //let task_read_dirs = Task::from_config("./config/only_read_dirs.sconfig").unwrap();
         //let task_ls3 = Task::from_config("./config/ls3.sconfig").unwrap();
         let mut process_forever = ProcessOfTask::new(task_forever, dev_log_out, dev_log_err);
@@ -568,7 +511,6 @@ mod process_test {
         assert!(process_forever.task_ref.pgrm_name == String::from("forever"));
         assert!(process_forever.is_running == true);
         sleep(Duration::from_secs(2));
-        process_forever.stop();
-        //assert!(process_forever.is_running == false);
+        //process_forever.stop();
     }
 }

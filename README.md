@@ -98,3 +98,8 @@ in the cost of poformance
 second rust is very tight in funcitonnality, the only way to make somehting work sometimes is threw mut, the rust core designers or lib designers dont have the choice or want to guaratnee peformance 
 
 # use bash to launch scripts  not sh 
+sh might not read your commands the same way 
+
+
+# cargo test 
+cargo test process_test -- --nocapture
