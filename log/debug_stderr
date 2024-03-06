@@ -1,10 +1,17 @@
-2024-03-05 09:22:05.115457739 +01:00 :: XQ2024-03-05 09:33:20.638075024 +01:00 :: XQ2024-03-05 09:35:12.043385322 +01:00 :: XQ
-2024-03-05 09:35:22.520517204 +01:00 :: XQ
-2024-03-05 09:37:34.665341094 +01:00 :: XQ
-2024-03-05 09:37:55.118661531 +01:00 :: XQ
-2024-03-05 11:07:53.540065628 +01:00 :: XQ
-2024-03-05 13:05:34.635673470 +01:00 :: invalid digit found in string
-2024-03-05 13:07:48.567115599 +01:00 ::   19281
-
-2024-03-05 13:07:48.567258653 +01:00 :: invalid digit found in string
-2024-03-05 13:09:47.381252694 +01:00 :: 19794
+2024-03-05 22:49:24.583912388 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh " | tr -s ' ' | cut -d ' ' -f2
+2024-03-05 22:49:24.584977219 +01:00 :: No such file or directory (os error 2)
+2024-03-05 22:54:24.463090604 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh " | tr -s ' ' | cut -d ' ' -f2
+2024-03-05 22:54:24.463913756 +01:00 :: No such file or directory (os error 2)
+2024-03-05 22:58:49.136595478 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh " | tr -s ' ' | cut -d ' ' -f2
+2024-03-05 22:58:49.137222826 +01:00 :: command output failed : No such file or directory (os error 2)
+2024-03-05 23:01:37.815361956 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh " | tr -s ' ' | cut -d ' ' -f2
+2024-03-05 23:01:37.815621337 +01:00 :: DEB -f2 : ["ps", "-ef", "|", "grep", "\"bash", "../scripts/forever.sh", "\"", "|", "tr", "-s", "'", "'", "|", "cut", "-d", "'", "'"]
+2024-03-05 23:01:37.816077179 +01:00 :: command output failed : No such file or directory (os error 2)
+2024-03-05 23:06:53.134819101 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh " | tr -s ' ' | cut -d ' ' -f2
+2024-03-05 23:06:53.134933318 +01:00 :: DEB ps : ["-ef", "|", "grep", "\"bash", "../scripts/forever.sh", "\"", "|", "tr", "-s", "'", "'", "|", "cut", "-d", "'", "'", "-f2"]
+2024-03-05 23:06:53.136295988 +01:00 :: >> 
+2024-03-05 23:06:53.136360340 +01:00 :: parse String to u32 failed with  : cannot parse integer from empty string
+2024-03-05 23:12:29.137360584 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh " | tr -s ' ' | cut -d ' ' -f2
+2024-03-05 23:12:29.137505868 +01:00 :: DEB ps : ["-ef", "|", "grep", "\"bash", "../scripts/forever.sh", "\"", "|", "tr", "-s", "'", "'", "|", "cut", "-d", "'", "'", "-f2"]
+2024-03-05 23:12:29.146099342 +01:00 :: >> 1402814031
+2024-03-05 23:15:14.052488011 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "14971\n14974\n", stderr: "" }

@@ -6,6 +6,7 @@ use std::collections::{HashMap};
 use std::hash::Hash;
 use std::io::Write;
 use chrono::Local;
+use nix::unistd::{getpid, getppid};
 
 use std::fs::{read_to_string, File, OpenOptions};
 use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}}; //Path::new -> &Path plus needs Box<&Path> since it's unsized (don't implement Sized), Box or & or PathBuf(like an owned Path)  fixes it
@@ -174,7 +175,7 @@ impl<'a> ProcessOfTask<'a>{
         command
     }
 
-    fn get_ppid(&mut self, child_pid : u32) -> Option<u32> {
+    fn get_ppid(&mut self) -> Option<u32> {
         /*let handler = Self::new_bash_cmd(format!("ps -o ppid= {}", child_pid));
         let exit_status_res = handler.status();
         match exit_status_res {
@@ -186,28 +187,42 @@ impl<'a> ProcessOfTask<'a>{
 
         // Execute a command and capture its output
         //format!("ps -o ppid= {}", child_pid)
-        let command_output_res = Command::new("ps")
-        .args(vec!["-o", "ppid=", &child_pid.to_string()])
-        .output();
+
+        let original_cmd : String = self.task_ref.cmd.iter().map(|s| String::from(s) + " ").collect();
+        let cmd = format!("ps -ef | grep {:?} | tr -s ' ' | cut -d ' ' -f2", original_cmd); //one before last 
+
+        //let program = "ps";
+        //let args = vec!["-ef", ];
+
+
+        //self.write_dev_err(cmd.clone());
+        //let mut cmd_and_args_vec : Vec<String> = cmd.split(" ").map(|s| String::from(s)).into_iter().collect();
+        //let program = cmd_and_args_vec.remove(0);
+        //let args = cmd_and_args_vec;
+        //self.write_dev_err(format!("DEB {} : {:?}",program, args));
+
+        let command_output_res = Command::new("bash").arg("-c").arg(cmd).output();
         
         match command_output_res {
             Ok(output) => {
-                let s = String::from_utf8_lossy(&output.stdout);
+                self.write_dev_err(format!("OUTPUT {:?}",output));
+                return None;
+                /*let s = String::from_utf8_lossy(&output.stdout);
                 let s = s.clone().into_owned();
                 let s : String = s.split_whitespace().collect();
-                self.write_dev_err(s.clone());
+                self.write_dev_err(format!(">> {}", s.clone()));
                 let string_to_u32_res = s.parse::<u32>();
                 match string_to_u32_res {
                     Ok(c) => return Some(c),
                     Err(e) => {
                         
-                        self.write_dev_err(e.to_string());
+                        self.write_dev_err(format!("parse String to u32 failed with {} : {}",s, e.to_string()));
                         return None;
                     }
-                }
+                }*/
             },
             Err(e) => {
-                self.write_dev_err(e.to_string());
+                self.write_dev_err(format!("command output failed : {}", e.to_string()));
                 return None;
             }
         }
@@ -258,7 +273,25 @@ impl<'a> ProcessOfTask<'a>{
         match cmd_spawned_res {
             Ok(cmd_spawned) => {
                 let cmd_spawned_pid : u32 = cmd_spawned.id();
-                let cmd_spawned_ppid_opt : Option<u32> = self.get_ppid(cmd_spawned_pid);
+                let cmd_spawned_ppid_opt : Option<u32> = self.get_ppid();
+
+
+
+                //NIX
+                // Get the current process ID
+                /*let current_pid = getpid();
+                // Get the parent process ID
+                let parent_pid = getppid();
+                self.write_dev_err(format!("nix pid {}",current_pid));
+                self.write_dev_err(format!("nix parent pid {}",parent_pid));*/
+
+                //SYSINFO crate
+                /*let mut system = sysinfo::System::new();
+                system.refresh_all();
+                for p in system.processes_by_name("forever") {
+                    self.write_dev_err(format!("SYSINFO CRATE PID {}: NAME {}", p.pid(), p.name()));
+                }*/
+
                 self.is_running = true;
                 self.pid = Some(cmd_spawned_pid);
                 self.ppid = cmd_spawned_ppid_opt;
@@ -276,7 +309,7 @@ impl<'a> ProcessOfTask<'a>{
                     }
                 }*/
             }
-            Err(e) => self.write_dev_err(e.to_string())
+            Err(e) => self.write_dev_err(format!("{} {}", String::from("command spawn failed :"), e.to_string()))
         }    
     }
 
@@ -284,11 +317,11 @@ impl<'a> ProcessOfTask<'a>{
         let duration = Duration::from_secs(self.task_ref.stoptime as u64); //conversion safe as max u32 fits u64
         sleep(duration);
         let kill_cmd = format!("kill -9 {}", pid); //SIGKILL
-        let mut handler = Self::new_bash_cmd(kill_cmd);
+        let mut handler = Self::new_bash_cmd(kill_cmd.clone());
         let ran_cmd_res = handler.status(); //a kill fails? come on
         match ran_cmd_res {
             Ok(_) => (),
-            Err(e) => self.write_dev_err(e.to_string())
+            Err(e) => self.write_dev_err(format!("running cmd |{}| failed : {}", kill_cmd.clone() ,e.to_string())),
         }
     }
 
@@ -363,14 +396,14 @@ impl<'a> ProcessOfTask<'a>{
                         let flush_res = file_opened.flush();
                         match flush_res {
                             Ok(_) => (),
-                            Err(e) => self.eprintln_dev_err(e.to_string())
+                            Err(e) => self.eprintln_dev_err(format!("flush failed : {}", e.to_string()))
                         }
                     }
-                    Err(e) => self.eprintln_dev_err(e.to_string())
+                    Err(e) => self.eprintln_dev_err(format!("write to file failed : {}", e.to_string()))
                 }
                 
             }
-            Err(e) => self.eprintln_dev_err(e.to_string())
+            Err(e) => self.eprintln_dev_err(format!("file opened failed : {}", e.to_string()))
         }
     }
 
