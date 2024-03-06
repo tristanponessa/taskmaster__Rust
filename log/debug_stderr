@@ -15,3 +15,37 @@
 2024-03-05 23:12:29.137505868 +01:00 :: DEB ps : ["-ef", "|", "grep", "\"bash", "../scripts/forever.sh", "\"", "|", "tr", "-s", "'", "'", "|", "cut", "-d", "'", "'", "-f2"]
 2024-03-05 23:12:29.146099342 +01:00 :: >> 1402814031
 2024-03-05 23:15:14.052488011 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "14971\n14974\n", stderr: "" }
+2024-03-06 09:40:34.687614418 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "8321\n8325\n", stderr: "" }
+2024-03-06 09:42:54.857500040 +01:00 :: nix pid 8976
+2024-03-06 09:42:54.857628629 +01:00 :: nix parent pid 8870
+2024-03-06 09:42:54.857639763 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "8979\n8982\n", stderr: "" }
+2024-03-06 09:46:09.450140426 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh " | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 09:46:09.459235943 +01:00 :: nix pid 9589
+2024-03-06 09:46:09.459298442 +01:00 :: nix parent pid 9485
+2024-03-06 09:46:09.459308230 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "9592\n9595\n", stderr: "" }
+2024-03-06 09:50:22.791067199 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh" | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 09:50:22.801083383 +01:00 :: nix pid 10995
+2024-03-06 09:50:22.801160435 +01:00 :: nix parent pid 10808
+2024-03-06 09:50:22.801176158 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "9591\n9593\n9597\n10997\n10998\n10999\n11001\n11002\n", stderr: "" }
+2024-03-06 09:52:48.407706315 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh" | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 09:52:48.420366082 +01:00 :: nix pid 11595
+2024-03-06 09:52:48.420425532 +01:00 :: nix parent pid 11593
+2024-03-06 09:52:48.420439523 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "11597\n11598\n11599\n11600\n11602\n", stderr: "" }
+2024-03-06 10:03:57.391809309 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh$" | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 10:03:57.401502176 +01:00 :: OUTPUT Output { status: ExitStatus(unix_wait_status(0)), stdout: "14054\n", stderr: "" }
+2024-03-06 10:23:11.639478998 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh$" | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 10:23:11.648912014 +01:00 :: OUTPUT [49, 53, 56, 49, 57, 10]
+2024-03-06 10:23:11.648994263 +01:00 :: trying to cast from >> 15819
+2024-03-06 10:26:15.468467832 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh$" | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 10:26:15.479082108 +01:00 :: trying to cast from >> 1581916644
+2024-03-06 10:46:13.472151936 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh$" | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 10:46:13.480830619 +01:00 :: OUTPUT  18566
+
+2024-03-06 10:46:13.480897537 +01:00 :: SPLITTING  ["18566", ""]
+2024-03-06 10:46:13.480913462 +01:00 :: trying to cast from >> 18566
+2024-03-06 10:46:39.822349066 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh$" | tr -s ' ' | cut -d ' ' -f2
+2024-03-06 10:46:39.831385861 +01:00 :: OUTPUT  18566
+18707
+
+2024-03-06 10:46:39.831443765 +01:00 :: SPLITTING  ["18566", "18707", ""]
+2024-03-06 10:46:39.831453424 +01:00 :: trying to cast from >> 18566

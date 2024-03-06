@@ -52,3 +52,23 @@
 2024-03-05 23:12:31.146269811 +01:00 :: wanna stop forever  PPID Some(1402814031) PID 14027 with parent pid 
 2024-03-05 23:15:14.052791839 +01:00 :: forever [PPID: None][PID: 14970] is now running <export  ANSWER=42  STARTED_BY=tasker  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout">
 2024-03-05 23:15:16.052932608 +01:00 :: wanna stop forever  PPID None PID 14970 with parent pid 
+2024-03-06 09:40:34.687742979 +01:00 :: forever [PPID: None][PID: 8320] is now running <export  ANSWER=42  STARTED_BY=tasker  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout">
+2024-03-06 09:40:36.687862864 +01:00 :: wanna stop forever  PPID None PID 8320 with parent pid 
+2024-03-06 09:42:54.857649387 +01:00 :: forever [PPID: None][PID: 8978] is now running <export  ANSWER=42  STARTED_BY=tasker  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout">
+2024-03-06 09:42:56.857744120 +01:00 :: wanna stop forever  PPID None PID 8978 with parent pid 
+2024-03-06 09:46:09.459327686 +01:00 :: forever [PPID: None][PID: 9591] is now running <export  STARTED_BY=tasker  ANSWER=42  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout">
+2024-03-06 09:46:11.459519330 +01:00 :: wanna stop forever  PPID None PID 9591 with parent pid 
+2024-03-06 09:50:22.801199121 +01:00 :: forever [PPID: None][PID: 10997] is now running <export  STARTED_BY=tasker  ANSWER=42  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout">
+2024-03-06 09:50:24.801311055 +01:00 :: wanna stop forever  PPID None PID 10997 with parent pid 
+2024-03-06 09:52:48.420462297 +01:00 :: forever [PPID: None][PID: 11597] is now running <export  STARTED_BY=tasker  ANSWER=42  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout">
+2024-03-06 09:52:50.420579722 +01:00 :: wanna stop forever  PPID None PID 11597 with parent pid 
+2024-03-06 10:03:57.401590546 +01:00 :: forever [PPID: None][PID: 14049] is now running <export  STARTED_BY=tasker  ANSWER=42  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout">
+2024-03-06 10:03:59.401717228 +01:00 :: wanna stop forever  PPID None PID 14049 with parent pid 
+2024-03-06 10:23:11.649007987 +01:00 :: forever [PID: 15819] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-06 10:23:13.649107070 +01:00 :: wanna stop forever  PPID None PID 15819 with parent pid 
+2024-03-06 10:26:15.479165410 +01:00 :: forever [PID: 1581916644] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-06 10:26:17.479288911 +01:00 :: wanna stop forever PID 1581916644 with parent pid 
+2024-03-06 10:46:13.480958945 +01:00 :: forever [PID: 18566] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-06 10:46:15.481048150 +01:00 :: wanna stop forever PID 18566
+2024-03-06 10:46:39.831466316 +01:00 :: forever [PID: 18566] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-06 10:46:41.831554929 +01:00 :: wanna stop forever PID 18566

@@ -1,7 +1,7 @@
 
 
 use std::fmt::format;
-use std::{clone, thread};
+use std::{clone, string, thread};
 use std::collections::{HashMap};
 use std::hash::Hash;
 use std::io::Write;
@@ -175,7 +175,31 @@ impl<'a> ProcessOfTask<'a>{
         command
     }
 
-    fn get_ppid(&mut self) -> Option<u32> {
+    fn get_pid(&mut self) -> Option<u32> {
+
+        /*
+            THE PID I want to retreive is hard to get 
+            once you use bash -c "bash ./script with && >> > ", if you use any of the command::process or nix crate get_pid function, it will give you the pid of the bash which immediatly ends so the PID dont exist anymore
+            when running this command, i find out if spawns multiple processes 
+            1."bash ./script with && >> > "  has its own pid
+            2.bash ./script  has its own pid 
+            stopping the 2. stops 1. but not the other way around 
+
+
+            $ ps -ef | grep "bash ./script.sh" 
+
+            trps       11597       1  0 09:52 pts/0    00:00:00 bash -c export  STARTED_BY=tasker  ANSWER=42  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout"
+            trps       11599   11597  0 09:52 pts/0    00:00:00 bash -c export  STARTED_BY=tasker  ANSWER=42  && umask 77 && (cd "./log" && bash ../scripts/forever.sh) >> "./log/script_stdout" 2>> "./log/script_stdout"
+            trps       11600   11599  0 09:52 pts/0    00:00:00 bash ../scripts/forever.sh
+            trps       11864    3286  0 09:53 pts/0    00:00:00 grep --color=auto -w bash ../scripts/forever.sh
+
+            $ ps -ef | grep "bash ./script.sh$" | tr -s ' ' | cut -d ' ' -f2
+
+            11600
+            the pid we want 
+         */
+
+
         /*let handler = Self::new_bash_cmd(format!("ps -o ppid= {}", child_pid));
         let exit_status_res = handler.status();
         match exit_status_res {
@@ -188,29 +212,34 @@ impl<'a> ProcessOfTask<'a>{
         // Execute a command and capture its output
         //format!("ps -o ppid= {}", child_pid)
 
-        let original_cmd : String = self.task_ref.cmd.iter().map(|s| String::from(s) + " ").collect();
-        let cmd = format!("ps -ef | grep {:?} | tr -s ' ' | cut -d ' ' -f2", original_cmd); //one before last 
-
-        //let program = "ps";
-        //let args = vec!["-ef", ];
-
-
-        //self.write_dev_err(cmd.clone());
-        //let mut cmd_and_args_vec : Vec<String> = cmd.split(" ").map(|s| String::from(s)).into_iter().collect();
-        //let program = cmd_and_args_vec.remove(0);
-        //let args = cmd_and_args_vec;
-        //self.write_dev_err(format!("DEB {} : {:?}",program, args));
-
+        let original_cmd : String = self.task_ref.cmd.iter().map(|s| String::from(s)).collect::<Vec<_>>().join(" ");
+        let original_cmd_regex = format!("{}$", original_cmd);
+        let cmd = format!("ps -ef | grep {:?} | tr -s ' ' | cut -d ' ' -f2", original_cmd_regex); //one before last 
+        self.write_dev_err(cmd.clone());
         let command_output_res = Command::new("bash").arg("-c").arg(cmd).output();
         
         match command_output_res {
             Ok(output) => {
-                self.write_dev_err(format!("OUTPUT {:?}",output));
-                return None;
-                /*let s = String::from_utf8_lossy(&output.stdout);
-                let s = s.clone().into_owned();
-                let s : String = s.split_whitespace().collect();
-                self.write_dev_err(format!(">> {}", s.clone()));
+                let possible_pid = output.stdout;
+                let s_from_u8_cast_cow = String::from_utf8_lossy(&possible_pid);
+                let s_from_u8_cast = s_from_u8_cast_cow.clone().into_owned();
+                self.write_dev_err(format!("OUTPUT  {}", s_from_u8_cast.clone()));
+                //mulitiple pids  PID1\nPID2 take any   but take 1 
+                let s : String = {
+                    let pids : Vec<String> = s_from_u8_cast.split("\n").into_iter().map(|e| String::from(e)).collect();
+                    self.write_dev_err(format!("SPLITTING  {:?}",pids));
+                    let first_opt = pids.get(0);
+                    match first_opt {
+                        Some(v) => {
+                            v.clone()
+                        },
+                        None => {
+                            s_from_u8_cast
+                        }
+                    }   
+                };
+
+                self.write_dev_err(format!("trying to cast from >> {}", s.clone()));
                 let string_to_u32_res = s.parse::<u32>();
                 match string_to_u32_res {
                     Ok(c) => return Some(c),
@@ -219,7 +248,7 @@ impl<'a> ProcessOfTask<'a>{
                         self.write_dev_err(format!("parse String to u32 failed with {} : {}",s, e.to_string()));
                         return None;
                     }
-                }*/
+                }
             },
             Err(e) => {
                 self.write_dev_err(format!("command output failed : {}", e.to_string()));
@@ -271,45 +300,21 @@ impl<'a> ProcessOfTask<'a>{
         //RUNS status() runs cmd
         let cmd_spawned_res : io::Result<Child> = self.handler.spawn(); //blocks 
         match cmd_spawned_res {
-            Ok(cmd_spawned) => {
-                let cmd_spawned_pid : u32 = cmd_spawned.id();
-                let cmd_spawned_ppid_opt : Option<u32> = self.get_ppid();
-
-
-
-                //NIX
-                // Get the current process ID
-                /*let current_pid = getpid();
-                // Get the parent process ID
-                let parent_pid = getppid();
-                self.write_dev_err(format!("nix pid {}",current_pid));
-                self.write_dev_err(format!("nix parent pid {}",parent_pid));*/
-
-                //SYSINFO crate
-                /*let mut system = sysinfo::System::new();
-                system.refresh_all();
-                for p in system.processes_by_name("forever") {
-                    self.write_dev_err(format!("SYSINFO CRATE PID {}: NAME {}", p.pid(), p.name()));
-                }*/
-
-                self.is_running = true;
-                self.pid = Some(cmd_spawned_pid);
-                self.ppid = cmd_spawned_ppid_opt;
-                self.write_dev_msg(format!("{} [PPID: {:?}][PID: {}] is now running <{}>", self.task_ref.pgrm_name, cmd_spawned_ppid_opt,cmd_spawned_pid,self.cmd));
-
-                /*match cmd_spawned_code_option {
-                    Some(exit_code) => {
-                        self.final_exit_code = Some(exit_code);
-                        self.write_dev_msg(format!("{} [PID: {}] <{}> stopped with exitcode {}", self.task_ref.pgrm_name,self.pid.unwrap(), self.cmd, self.final_exit_code.unwrap()));
+            Ok(_) => {
+                let cmd_spawned_pid_opt : Option<u32> = self.get_pid();
+                match cmd_spawned_pid_opt {
+                    Some(cmd_spawned_pid) => {
+                        self.pid = Some(cmd_spawned_pid);
+                        self.is_running = true;
+                        self.write_dev_msg(format!("{} [PID: {}] is now running <{:?}> ", self.task_ref.pgrm_name, self.pid.unwrap(), self.task_ref.cmd));
                     } 
                     None => {
-                        self.pid = Some(std::process::id()); //gets current running process ... lets hope it refers this one 
                         self.is_running = true;
-                        self.write_dev_msg(format!("{} [PID: {}] <{}> is now running", self.task_ref.pgrm_name, self.cmd,self.pid.unwrap()));
+                        self.write_dev_msg(format!("failed to retreive PID for this process (is running) : {:?}", self.task_ref.cmd));
                     }
-                }*/
+                }
             }
-            Err(e) => self.write_dev_err(format!("{} {}", String::from("command spawn failed :"), e.to_string()))
+            Err(e) => self.write_dev_err(format!("{} [{:?}] : {}", String::from("command run failed :"), self.task_ref.cmd,e.to_string()))
         }    
     }
 
@@ -344,7 +349,7 @@ impl<'a> ProcessOfTask<'a>{
             Some(pid) => {
                 let stop_cmd = format!("kill {}", pid); //SIGTERM
                 let mut handler = Self::new_bash_cmd(stop_cmd);
-                self.write_dev_msg(format!("wanna stop {}  PPID {:?} PID {} with parent pid ", self.task_ref.pgrm_name , self.ppid, pid));
+                self.write_dev_msg(format!("wanna stop {} PID {}", self.task_ref.pgrm_name , pid));
                 /* 
                 let ran_cmd_res = handler.spawn();
                 match ran_cmd_res {
@@ -605,3 +610,6 @@ mod process_test {
         //assert!(process_forever.is_running == false);
     }
 }
+
+
+
