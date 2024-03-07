@@ -388,10 +388,13 @@ impl<'a> ProcessOfTask<'a>{
                 match stop_cmd_res {
                     Ok(_) => {
                             //if it stopped immedatily 
-                            let exitcode_res  = self.handler.output();
-                            match exitcode_res {
+
+                            let exitcode_cmd = format!("wait ${} && exit_code=$?", pid);
+                            let mut handler = Self::new_bash_cmd(exitcode_cmd);
+                            let exitcode_cmd_res = handler.output();
+                            match exitcode_cmd_res {
                                 Ok(v) => {
-                                    self.write_dev_msg(format!("exitcode : {:?}", v.status));
+                                    self.write_dev_msg(format!("exitcode : {:?}", v.stdout));
                                 },
                                 Err(e) => {
                                     self.write_dev_err(format!("exitcode error : {:?}", e.to_string()));

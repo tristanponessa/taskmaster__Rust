@@ -100,3 +100,10 @@ stopped or killed 2024-03-07 10:21:15.486605704 +01:00 ::  PROGRAM <forever> PID
 2024-03-07 10:54:42.560307286 +01:00 :: forever [PID: 11205] is now running <["bash", "../scripts/forever.sh"]> 
 2024-03-07 10:54:44.560511190 +01:00 :: attempting stop program forever [PID 11205] with timeout 10
  2024-03-07 10:54:44.560443996 +01:00 :: stopped or killed  PROGRAM <forever> PID[Some(11205)] 
+2024-03-07 14:31:58.818601740 +01:00 :: forever [PID: 12227] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 14:32:00.818752651 +01:00 :: attempting stop program forever [PID 12227] with timeout 10
+ 2024-03-07 14:32:00.818700274 +01:00 :: stopped or killed  PROGRAM <forever> PID[Some(12227)] 
+2024-03-07 14:41:35.940863595 +01:00 :: forever [PID: 13070] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 14:41:37.940992610 +01:00 :: attempting stop program forever [PID 13070] with timeout 10
+2024-03-07 14:41:37.942859678 +01:00 :: exitcode : []
+ 2024-03-07 14:41:37.940957394 +01:00 :: stopped or killed  PROGRAM <forever> PID[Some(13070)] 
