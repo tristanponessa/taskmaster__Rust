@@ -107,7 +107,7 @@ pub struct ProcessOfTask<'a> {
     pid: Option<u32>,
     final_exit_code: Option<i32>,
     nb_restarted : usize,
-    is_running : bool,
+    //is_running : bool,
     last_error : Option<String>, 
     log_file_out : String, 
     log_file_err : String, 
@@ -142,7 +142,7 @@ impl<'a> ProcessOfTask<'a>{
             pid : None,
             nb_restarted : 0,
             final_exit_code: None,
-            is_running : false,
+            //is_running : false,
             last_error : None, 
             dev_errors : HashMap::new(),
             log_file_out : log_out,
@@ -315,11 +315,11 @@ impl<'a> ProcessOfTask<'a>{
                 match cmd_spawned_pid_opt {
                     Some(cmd_spawned_pid) => {
                         self.pid = Some(cmd_spawned_pid);
-                        self.is_running = true;
+                        //self.is_running = true;
                         self.write_dev_msg(format!("{} [PID: {}] is now running <{:?}> ", self.task_ref.pgrm_name, self.pid.unwrap(), self.task_ref.cmd));
                     } 
                     None => {
-                        self.is_running = true;
+                        //self.is_running = true;
                         self.write_dev_msg(format!("failed to retreive PID for this process (is running) : {:?}", self.task_ref.cmd));
                     }
                 }
@@ -387,6 +387,17 @@ impl<'a> ProcessOfTask<'a>{
                 let stop_cmd_res = handler.spawn();
                 match stop_cmd_res {
                     Ok(_) => {
+                            //if it stopped immedatily 
+                            let exitcode_res  = self.handler.output();
+                            match exitcode_res {
+                                Ok(v) => {
+                                    self.write_dev_msg(format!("exitcode : {:?}", v.status));
+                                },
+                                Err(e) => {
+                                    self.write_dev_err(format!("exitcode error : {:?}", e.to_string()));
+                                }
+                            }
+
                             //self.stop_timer_before_sigkill();
                     }
                     Err(e) => self.write_dev_err(format!("attempt FAILED to run stop cmd for program {} [PID {}] : {}", self.task_ref.pgrm_name , pid , e.to_string()))
@@ -400,6 +411,10 @@ impl<'a> ProcessOfTask<'a>{
                 self.write_dev_err(format!("wanna stop {}, but no PID assigned  self.pid None? {}", self.task_ref.pgrm_name , self.pid.is_none()));
             }    
         }
+
+        /*fn status(&self) -> String {
+            
+        }*/
         
 
         
@@ -634,7 +649,7 @@ mod process_test {
         //assert!(process1.cmd , String::from(""));
         //assert!(process1.pid.is_some());
         assert!(process_forever.task_ref.pgrm_name == String::from("forever"));
-        assert!(process_forever.is_running == true);
+        //assert!(process_forever.is_running == true);
         sleep(Duration::from_secs(2));
         process_forever.stop();
         //assert!(process_forever.is_running == false);
