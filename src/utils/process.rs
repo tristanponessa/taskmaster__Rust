@@ -167,6 +167,16 @@ impl<'a> ProcessOfTask<'a>{
         println!("{} :: {}", now_date, error_msg);
     }
 
+    fn str_dev_msg(msg : String) -> String {
+        let now_date = Local::now();
+        format!("{} :: {}", now_date, msg)
+    }
+
+    fn name_pid_str(&self) -> String {
+        format!(" PROGRAM <{}> PID[{:?}] ",self.task_ref.pgrm_name, self.pid)
+    }
+        
+
     fn new_bash_cmd(cmd_and_args : String) -> Command {
         let mut command = Command::new("bash");
         command.arg("-c").arg(cmd_and_args);
@@ -318,7 +328,7 @@ impl<'a> ProcessOfTask<'a>{
         }    
     }
 
-    fn stop_timer_before_sigkill(&'a mut self) {
+    /*fn stop_timer_before_sigkill(&'a mut self) {
 
         match self.pid {
             Some(_) => {()},
@@ -328,6 +338,8 @@ impl<'a> ProcessOfTask<'a>{
             }
         }
         let pid = self.pid.unwrap();
+
+
 
         thread::spawn(move || {
 
@@ -344,7 +356,11 @@ impl<'a> ProcessOfTask<'a>{
             }
 
         });
-    }
+    }*/
+
+    /*async watcher_stop_or_kill() {
+
+    }*/
 
     pub  fn stop(&mut self) {
      /* 
@@ -363,13 +379,15 @@ impl<'a> ProcessOfTask<'a>{
         //let kill_cmd = format!("kill -9 {}", ); //SIGKILL
         match self.pid {
             Some(pid) => {
-                let stop_cmd = format!("kill {}", pid); //SIGTERM
+                let stop_cmd_msg = Self::str_dev_msg(format!("stopped or killed {}",self.name_pid_str()));
+                let stop_cmd = format!("timeout {}s kill {} && echo \" {}\" >> {}",
+                                        self.task_ref.stoptime ,pid, stop_cmd_msg,self.log_file_out); //SIGTERM
                 let mut handler = Self::new_bash_cmd(stop_cmd);
-                self.write_dev_msg(format!("attempting stop program {} [PID {}]", self.task_ref.pgrm_name , pid));
+                self.write_dev_msg(format!("attempting stop program {} [PID {}] with timeout {}", self.task_ref.pgrm_name , pid, self.task_ref.stoptime));
                 let stop_cmd_res = handler.spawn();
                 match stop_cmd_res {
                     Ok(_) => {
-                            self.stop_timer_before_sigkill();
+                            //self.stop_timer_before_sigkill();
                     }
                     Err(e) => self.write_dev_err(format!("attempt FAILED to run stop cmd for program {} [PID {}] : {}", self.task_ref.pgrm_name , pid , e.to_string()))
                 }

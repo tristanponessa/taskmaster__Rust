@@ -74,3 +74,23 @@
 2024-03-06 10:46:41.831554929 +01:00 :: wanna stop forever PID 18566
 2024-03-07 00:36:41.979316877 +01:00 :: forever [PID: 3149] is now running <["bash", "../scripts/forever.sh"]> 
 2024-03-07 00:36:43.979417678 +01:00 :: wanna stop forever PID 3149
+2024-03-07 09:44:04.227503825 +01:00 :: forever [PID: 5885] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 09:44:06.227631452 +01:00 :: attempting stop program forever [PID 5885] with timeout 10
+2024-03-07 09:55:30.958809613 +01:00 :: forever [PID: 6589] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 09:55:32.958909979 +01:00 :: attempting stop program forever [PID 6589] with timeout 10
+stopped or killed forever PID[6589]
+2024-03-07 10:01:33.932649607 +01:00 :: forever [PID: 7295] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 10:01:35.932918908 +01:00 :: attempting stop program forever [PID 7295] with timeout 10
+stopped or killed forever PID[7295]
+2024-03-07 10:05:28.882147100 +01:00 :: forever [PID: 7611] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 10:05:30.882261831 +01:00 :: attempting stop program forever [PID 7611] with timeout 10
+stopped or killed PROGRAM <forever> PID[7611]
+2024-03-07 10:17:37.297526833 +01:00 :: forever [PID: 8189] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 10:17:39.297651062 +01:00 :: attempting stop program forever [PID 8189] with timeout 10
+stopped or killed  PROGRAM <forever> PID[Some(8189)] 
+2024-03-07 10:21:13.486506463 +01:00 :: forever [PID: 8476] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 10:21:15.486659620 +01:00 :: attempting stop program forever [PID 8476] with timeout 10
+stopped or killed 2024-03-07 10:21:15.486605704 +01:00 ::  PROGRAM <forever> PID[Some(8476)] 
+2024-03-07 10:22:25.003201914 +01:00 :: forever [PID: 8768] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 10:22:27.003395510 +01:00 :: attempting stop program forever [PID 8768] with timeout 10
+ 2024-03-07 10:22:27.003325874 +01:00 :: stopped or killed  PROGRAM <forever> PID[Some(8768)] 
