@@ -318,16 +318,32 @@ impl<'a> ProcessOfTask<'a>{
         }    
     }
 
-     fn stop_timer_before_sigkill(&mut self, pid : u32) {
-        let duration = Duration::from_secs(self.task_ref.stoptime as u64); //conversion safe as max u32 fits u64
-        sleep(duration);
-        let kill_cmd = format!("kill -9 {}", pid); //SIGKILL
-        let mut handler = Self::new_bash_cmd(kill_cmd.clone());
-        let ran_cmd_res = handler.status(); //a kill fails? come on
-        match ran_cmd_res {
-            Ok(_) => (),
-            Err(e) => self.write_dev_err(format!("running cmd |{}| failed : {}", kill_cmd.clone() ,e.to_string())),
+    fn stop_timer_before_sigkill(&'a mut self) {
+
+        match self.pid {
+            Some(_) => {()},
+            None => {
+                self.write_dev_err(format!("stop timer before sigkill aborting for program {} : it doesn't have a PID",self.task_ref.pgrm_name));
+                return ;
+            }
         }
+        let pid = self.pid.unwrap();
+
+        thread::spawn(move || {
+
+            let duration = Duration::from_secs(self.task_ref.stoptime as u64); //conversion safe as max u32 fits u64
+            sleep(duration);
+            let kill_cmd = format!("kill -9 {}", pid); //SIGKILL
+            let mut handler = Self::new_bash_cmd(kill_cmd.clone());
+            let ran_cmd_res = handler.status(); //a kill fails? come on
+            match ran_cmd_res {
+                Ok(_) => self.write_dev_msg(
+                    format!("program {} [{:?}] failed to gracefully stop in time {} : killing process!", 
+                    self.task_ref.pgrm_name, pid, self.task_ref.stoptime)),
+                Err(e) => self.write_dev_err(format!("running cmd |{}| failed : {}", kill_cmd.clone() ,e.to_string())),
+            }
+
+        });
     }
 
     pub  fn stop(&mut self) {
@@ -349,20 +365,16 @@ impl<'a> ProcessOfTask<'a>{
             Some(pid) => {
                 let stop_cmd = format!("kill {}", pid); //SIGTERM
                 let mut handler = Self::new_bash_cmd(stop_cmd);
-                self.write_dev_msg(format!("wanna stop {} PID {}", self.task_ref.pgrm_name , pid));
-                /* 
-                let ran_cmd_res = handler.spawn();
-                match ran_cmd_res {
+                self.write_dev_msg(format!("attempting stop program {} [PID {}]", self.task_ref.pgrm_name , pid));
+                let stop_cmd_res = handler.spawn();
+                match stop_cmd_res {
                     Ok(_) => {
-                        let _ = thread::spawn(move || {
-                            self.stop_timer_before_sigkill(pid);
-                        });
-                        
+                            self.stop_timer_before_sigkill();
                     }
-                    Err(e) => self.write_dev_err(e.to_string())
+                    Err(e) => self.write_dev_err(format!("attempt FAILED to run stop cmd for program {} [PID {}] : {}", self.task_ref.pgrm_name , pid , e.to_string()))
                 }
-                //write somewhere if failed to stop 
-                */
+                
+                
 
 
             },

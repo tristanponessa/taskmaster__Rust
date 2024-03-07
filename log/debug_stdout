@@ -72,3 +72,5 @@
 2024-03-06 10:46:15.481048150 +01:00 :: wanna stop forever PID 18566
 2024-03-06 10:46:39.831466316 +01:00 :: forever [PID: 18566] is now running <["bash", "../scripts/forever.sh"]> 
 2024-03-06 10:46:41.831554929 +01:00 :: wanna stop forever PID 18566
+2024-03-07 00:36:41.979316877 +01:00 :: forever [PID: 3149] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-07 00:36:43.979417678 +01:00 :: wanna stop forever PID 3149
