@@ -308,7 +308,7 @@ impl<'a> ProcessOfTask<'a>{
         /* the process is not running, once you run it, it will have a pid , and the other fields will be updated  */
         //we dont want to modify the old one so we clone   but it dont implement it ......
         //RUNS status() runs cmd
-        let cmd_spawned_res : io::Result<Child> = self.handler.spawn(); //blocks 
+        let cmd_spawned_res : io::Result<Child> = self.handler.spawn(); 
         match cmd_spawned_res {
             Ok(_) => {
                 let cmd_spawned_pid_opt : Option<u32> = self.get_pid();
@@ -634,7 +634,7 @@ mod process_test {
 
 
     #[test]
-    fn run_process() {
+    fn process1() {
 
         let dev_log_out = String::from("./log/debug_stdout");
         let dev_log_err = String::from("./log/debug_stderr");

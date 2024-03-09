@@ -115,3 +115,14 @@
 
 2024-03-08 10:54:42.936020157 +01:00 :: SPLITTING  ["5074", ""]
 2024-03-08 10:54:42.936032106 +01:00 :: trying to cast from >> 5074
+2024-03-09 11:26:34.316261572 +01:00 :: ps -ef | grep "bash ./scripts/forever.sh$" | tr -s ' ' | cut -d ' ' -f2
+2024-03-09 11:26:34.327255460 +01:00 :: OUTPUT  
+2024-03-09 11:26:34.327320967 +01:00 :: SPLITTING  [""]
+2024-03-09 11:26:34.327332083 +01:00 :: trying to cast from >> 
+2024-03-09 11:26:34.327347928 +01:00 :: parse String to u32 failed with  : cannot parse integer from empty string
+2024-03-09 11:26:36.327436879 +01:00 :: wanna stop forever, but no PID assigned  self.pid None? true
+2024-03-09 11:27:15.417976027 +01:00 :: ps -ef | grep "bash ../scripts/forever.sh$" | tr -s ' ' | cut -d ' ' -f2
+2024-03-09 11:27:15.427533548 +01:00 :: OUTPUT  10444
+
+2024-03-09 11:27:15.427637865 +01:00 :: SPLITTING  ["10444", ""]
+2024-03-09 11:27:15.427662747 +01:00 :: trying to cast from >> 10444

@@ -144,12 +144,18 @@ impl<'a> ProcessOfTask<'a>{
     pub fn init_handler(a_task : &Task) -> Command {
         let cmd = a_task.cmd.clone().remove(0);
         let mut args = a_task.cmd.clone();
+
+        println!("{} {:?}", cmd, args);
         
-        let mut handler = Command::new(cmd);
-        handler.args(args);
+        let mut handler = Command::new("bash");
         handler.current_dir(a_task.workingdir.clone());
+        handler.arg("-c");
+        handler.args(a_task.cmd.clone());
         handler.stdout(Stdio::from(Self::pathBuf_to_File(a_task.stdout.clone()))); // Set stdout to capture command output
         handler.stderr(Stdio::from(Self::pathBuf_to_File(a_task.stderr.clone()))); // Set stderr to capture command error
+        
+        
+        //handler.stderr(Stdio::from(Self::pathBuf_to_File(a_task.stderr.clone()))); // Set stderr to capture command error
             /* .pre_exec(|| {
                 // Set umask to 022 (user has read, write, execute permissions) ONLY for this handler
                 
@@ -197,25 +203,39 @@ impl<'a> ProcessOfTask<'a>{
             continue
         */
 
-        let cmd_spawned_res : io::Result<Child> = self.handler.spawn(); //blocks 
+        let cmd_spawned_res : io::Result<Child> = self.handler.spawn(); 
+        //let cmd_spawned_res = self.handler.output(); 
+        
         match cmd_spawned_res {
             Ok(mut child) => {
                 self.pid = Some(child.id());
+
                 match self.pid {
                     Some(_) => {},
                     None => {
                         self.write_to_log_details("err", format!("couldn't retreive PID"));
                     }
                 }
-                let exit_status_res = child.wait();
+                println!("GONNA WAIT??");
+                println!("?? {}", self.pid.unwrap());
+                /*let exit_status_res = child.wait();
+                println!("DONE??");
                 match exit_status_res {
                     Ok(exit_status) => {
                         let exit_code_opt = exit_status.code();
                         match exit_code_opt {
                             Some(exit_code) => {
                                 self.final_exit_code = Some(exit_code);
-                                self.write_to_log_details("out", format!("exitcode : {:?}", exit_code));
+                                self.write_to_log_details("out", format!("STOPPED exitcode : {:?}", exit_code));
+                                if exit_code == 126 {
+                                    self.write_to_log_details("out", format!("126 means command couldn't be executed"));
+                                }
+                                if exit_code == 127 {
+                                    self.write_to_log_details("out", format!("127 means couldn't find path for script"));
+                                }
+                                
                                 //compare to self.task_ref.exitcodes and print if existed gracefully 
+
                             },
                             None => {
                                 self.write_to_log_details("err", format!("couldn't get exitcode"));
@@ -225,7 +245,7 @@ impl<'a> ProcessOfTask<'a>{
                     Err(e) => {
                         self.write_to_log_details("err", format!("retreiving exitcode error : {:?}", e.to_string()));
                     }
-                }
+                }*/
                 self.child_handler = Some(child);
             }
             Err(e) => self.write_to_log_details("err", format!("{} [{:?}] : {}", String::from("command run failed :"), self.task_ref.cmd,e.to_string())),
@@ -267,8 +287,8 @@ impl<'a> ProcessOfTask<'a>{
 
 
 
-#[test]
-fn process1() {
+#[tokio::test]
+async fn process1() {
 
     let dev_log_out = String::from("./log/debug_stdout");
     let dev_log_err = String::from("./log/debug_stderr");
@@ -282,7 +302,7 @@ fn process1() {
     let mut process_forever = ProcessOfTask::new(task_forever, dev_log_out, dev_log_err);
     //let process_read_dirs = ProcessOfTask::new(&task_read_dirs);
     //let process_ls3 = ProcessOfTask::new(&task_ls3);
-    //process_forever.run(); //the handler field makes these asserts true 
+    process_forever.run().await; //the handler field makes these asserts true 
     //assert!(process1.cmd , String::from(""));
     //assert!(process1.pid.is_some());
     //assert!(process_forever.task_ref.pgrm_name == String::from("forever"));

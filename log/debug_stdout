@@ -111,3 +111,19 @@ stopped or killed 2024-03-07 10:21:15.486605704 +01:00 ::  PROGRAM <forever> PID
 2024-03-08 10:54:44.936238400 +01:00 :: attempting stop program forever [PID 5074] with timeout 10
 2024-03-08 10:54:44.939782740 +01:00 :: exitcode : []
  2024-03-08 10:54:44.936170304 +01:00 :: stopped or killed  PROGRAM <forever> PID[Some(5074)] 
+[2024-03-08 15:20:17.742766062 +01:00] [PROGRAM forever] [PID Some(7797)] exitcode : 126
+[2024-03-08 15:26:29.122121863 +01:00] [PROGRAM forever] [PID Some(8311)] STOPPED exitcode : 126
+[2024-03-08 15:31:56.870269234 +01:00] [PROGRAM forever] [PID Some(9047)] STOPPED exitcode : 126
+[2024-03-09 10:35:31.712589821 +01:00] [PROGRAM forever] [PID Some(4222)] STOPPED exitcode : 126
+[2024-03-09 10:39:43.135396839 +01:00] [PROGRAM forever] [PID Some(5304)] STOPPED exitcode : 126
+[2024-03-09 10:45:37.904449491 +01:00] [PROGRAM forever] [PID Some(5659)] STOPPED exitcode : 126
+[2024-03-09 10:45:37.904542646 +01:00] [PROGRAM forever] [PID Some(5659)] 126 means command couldn't be executed
+[2024-03-09 10:49:22.588285645 +01:00] [PROGRAM forever] [PID Some(5962)] STOPPED exitcode : 2
+[2024-03-09 10:52:27.365753839 +01:00] [PROGRAM forever] [PID Some(6307)] STOPPED exitcode : 127
+[2024-03-09 10:54:35.859479257 +01:00] [PROGRAM forever] [PID Some(6901)] STOPPED exitcode : 126
+[2024-03-09 10:54:35.859609234 +01:00] [PROGRAM forever] [PID Some(6901)] 126 means command couldn't be executed
+2024-03-09 11:26:34.327357194 +01:00 :: failed to retreive PID for this process (is running) : ["bash", "./scripts/forever.sh"]
+2024-03-09 11:27:15.427689931 +01:00 :: forever [PID: 10444] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-09 11:27:17.427900346 +01:00 :: attempting stop program forever [PID 10444] with timeout 10
+2024-03-09 11:27:17.431813507 +01:00 :: exitcode : []
+ 2024-03-09 11:27:17.427840233 +01:00 :: stopped or killed  PROGRAM <forever> PID[Some(10444)] 
