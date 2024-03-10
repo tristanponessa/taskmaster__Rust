@@ -103,3 +103,13 @@ sh might not read your commands the same way
 
 # cargo test 
 cargo test process_test -- --nocapture
+
+
+
+
+## porject notes 
+
+
+
+In the general case, the exit code when a process is killed is unpredictable.
+so very hard to test 

@@ -1,11 +1,14 @@
 
 
 use std::fmt::format;
+use std::os::unix::process::ExitStatusExt;
 use std::{clone, string, thread};
 use std::collections::{HashMap};
 use std::hash::Hash;
 use std::io::Write;
 use chrono::Local;
+use libc::c_int;
+use nix::sys::wait::{waitpid, WaitStatus};
 use nix::unistd::{getpid, getppid};
 
 use std::fs::{read_to_string, File, OpenOptions};
@@ -16,6 +19,7 @@ use std::thread::sleep;
 use std::time::Instant;
 use regex::Regex;
 use std::process::{self, Child};
+use nix::unistd::Pid;
 
 use crate::*;
 
@@ -380,34 +384,62 @@ impl<'a> ProcessOfTask<'a>{
         match self.pid {
             Some(pid) => {
                 let stop_cmd_msg = Self::str_dev_msg(format!("stopped or killed {}",self.name_pid_str()));
-                let stop_cmd = format!("timeout {}s kill {} && echo \" {}\" >> {}",
-                                        self.task_ref.stoptime ,pid, stop_cmd_msg,self.log_file_out); //SIGTERM
+                let stop_cmd = format!("timeout {}s kill {} ; echo $? >1 ; echo $? >> {}",
+                                        self.task_ref.stoptime ,pid,self.log_file_out); //SIGTERM
                 let mut handler = Self::new_bash_cmd(stop_cmd);
                 self.write_dev_msg(format!("attempting stop program {} [PID {}] with timeout {}", self.task_ref.pgrm_name , pid, self.task_ref.stoptime));
-                let stop_cmd_res = handler.spawn();
+                let stop_cmd_res = handler.output();
                 match stop_cmd_res {
-                    Ok(_) => {
-                            //if it stopped immedatily 
+                    Ok(out) => {
+                            println!("exitcode : out:{:?} err:{:?}", out.stdout, out.stderr);
 
-                            let exitcode_cmd = format!("wait ${} && exit_code=$?", pid);
-                            let mut handler = Self::new_bash_cmd(exitcode_cmd);
-                            let exitcode_cmd_res = handler.output();
-                            match exitcode_cmd_res {
+
+
+                            //if it stopped immedatily 
+                            /*match out.status.code() {
                                 Ok(v) => {
                                     self.write_dev_msg(format!("exitcode : {:?}", v.stdout));
                                 },
                                 Err(e) => {
                                     self.write_dev_err(format!("exitcode error : {:?}", e.to_string()));
                                 }
-                            }
+                            }*/
 
                             //self.stop_timer_before_sigkill();
                     }
-                    Err(e) => self.write_dev_err(format!("attempt FAILED to run stop cmd for program {} [PID {}] : {}", self.task_ref.pgrm_name , pid , e.to_string()))
+                    Err(e) => self.write_dev_err(format!("attempt FAILED to execute stop cmd for program {} [PID {}] : {}", self.task_ref.pgrm_name , pid , e.to_string()))
                 }
                 
-                
 
+                /*let pid_rawfd: std::os::unix::prelude::RawFd = pid as std::os::unix::prelude::RawFd;
+                let pid_cint: c_int = pid_rawfd as c_int;
+
+                let mut status: Option<ExitStatus> = None;
+                loop {
+                    match waitpid(Some(Pid::from_raw(pid as i32)), None) {
+                        Ok(WaitStatus::Exited(_, exit_code)) => {
+                            println!("Process exited with status: {}", exit_code);
+                            status = Some(ExitStatus::from_raw(exit_code));
+                            break;
+                        }
+                        Ok(WaitStatus::Signaled(_, signal, _)) => {
+                            println!("Process killed by signal: {:?}", signal);
+                            // Optionally handle the case where the process was killed by a signal
+                            break;
+                        }
+                        Ok(WaitStatus::StillAlive) => {
+                            println!("waiting to finish ...");
+                        }
+                        Err(_) => {
+                            println!("Error waiting for process to exit");
+                            break;
+                        },
+                        _ => {
+                            println!("unknown conclusion ...");
+                        }
+                    }
+                
+                }*/
 
             },
             None => {

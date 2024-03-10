@@ -127,3 +127,28 @@ stopped or killed 2024-03-07 10:21:15.486605704 +01:00 ::  PROGRAM <forever> PID
 2024-03-09 11:27:17.427900346 +01:00 :: attempting stop program forever [PID 10444] with timeout 10
 2024-03-09 11:27:17.431813507 +01:00 :: exitcode : []
  2024-03-09 11:27:17.427840233 +01:00 :: stopped or killed  PROGRAM <forever> PID[Some(10444)] 
+2024-03-10 14:39:59.196918713 +01:00 :: forever [PID: 81105] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 14:43:39.340678055 +01:00 :: forever [PID: 81814] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 14:47:25.718739447 +01:00 :: forever [PID: 82431] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:02:28.891873897 +01:00 :: forever [PID: 83762] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:09:17.806911215 +01:00 :: forever [PID: 84377] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:09:19.807074502 +01:00 :: attempting stop program forever [PID 84377] with timeout 10
+0
+2024-03-10 15:11:39.188124767 +01:00 :: forever [PID: 84685] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:11:41.188374056 +01:00 :: attempting stop program forever [PID 84685] with timeout 10
+2024-03-10 15:12:53.081576120 +01:00 :: forever [PID: 84925] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:20:03.363147872 +01:00 :: forever [PID: 85727] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:24:01.684521848 +01:00 :: forever [PID: 86233] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:25:08.102763348 +01:00 :: forever [PID: 86502] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:25:10.103032215 +01:00 :: attempting stop program forever [PID 86502] with timeout 10
+2024-03-10 15:26:31.157879660 +01:00 :: forever [PID: 86743] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 15:26:33.158038042 +01:00 :: attempting stop program forever [PID 86743] with timeout 10
+2024-03-10 16:23:20.777028060 +01:00 :: forever [PID: 89674] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 16:23:22.777201598 +01:00 :: attempting stop program forever [PID 89674] with timeout 10
+0
+2024-03-10 16:26:46.577921071 +01:00 :: forever [PID: 90019] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 16:26:48.578099137 +01:00 :: attempting stop program forever [PID 90019] with timeout 10
+0
+2024-03-10 16:29:29.911904269 +01:00 :: forever [PID: 90252] is now running <["bash", "../scripts/forever.sh"]> 
+2024-03-10 16:29:31.912091552 +01:00 :: attempting stop program forever [PID 90252] with timeout 10
+0
