@@ -6,6 +6,7 @@ use std::hash::Hash;
 use std::io::Write;
 use chrono::Local;
 use nix::unistd::{getpid, getppid};
+use tokio::task;
 
 use std::fs::{read_to_string, File, OpenOptions};
 use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}}; //Path::new -> &Path plus needs Box<&Path> since it's unsized (don't implement Sized), Box or & or PathBuf(like an owned Path)  fixes it
@@ -54,10 +55,10 @@ env: STARTED_BY=taskmaster,ANSWER=42,\n
 type BuildCmd = String;
 
 #[derive(Debug)]
-pub struct ProcessOfTask<'a> {
+pub struct ProcessOfTask {
     handler: Command,
     child_handler : Option<Child>,
-    task_ref : &'a Task,
+    task : Task,
     ppid : Option<u32>,
     pid: Option<u32>,
     final_exit_code: Option<i32>,
@@ -67,13 +68,14 @@ pub struct ProcessOfTask<'a> {
     log_file_err : String, 
 }
 
-impl<'a> ProcessOfTask<'a>{
+impl ProcessOfTask{
 
-    pub fn new(a_task : &'a Task, log_out : String, log_err : String) -> Self {
+    pub fn new(a_task : Task, log_out : String, log_err : String) -> Self {
+        let a_task_ = a_task.clone();
         Self {
             handler : Self::init_handler(a_task),
             child_handler : None, 
-            task_ref : a_task,
+            task : a_task_,
             ppid : None,
             pid : None,
             nb_restarted : 0,
@@ -87,13 +89,13 @@ impl<'a> ProcessOfTask<'a>{
 
     fn write_to_log_details(&mut self, which_file : &str, msg : String) {
         let now_date = Local::now();
-        let self_details = format!("[PROGRAM {}] [PID {:?}]",self.task_ref.pgrm_name, self.pid);
+        let self_details = format!("[PROGRAM {}] [PID {:?}]",self.task.pgrm_name, self.pid);
         self.write_to_log(which_file, format!("[{}] {} {}",now_date, self_details, msg));
     }
 
     fn eprintln_details(&mut self, msg : String) {
         let now_date = Local::now();
-        let self_details = format!("[PROGRAM {}] [PID {:?}]",self.task_ref.pgrm_name, self.pid);
+        let self_details = format!("[PROGRAM {}] [PID {:?}]",self.task.pgrm_name, self.pid);
         eprintln!("{}", format!("[{}] {} {}",now_date, self_details, msg));
     }
     
@@ -127,7 +129,7 @@ impl<'a> ProcessOfTask<'a>{
     }
 
     //fn name_pid_str(&self) -> String {
-    //    format!(" PROGRAM <{}> PID[{:?}] ",self.task_ref.pgrm_name, self.pid)
+    //    format!(" PROGRAM <{}> PID[{:?}] ",self.task.pgrm_name, self.pid)
     //}
 
     /*pub fn run(&mut self) {
@@ -141,19 +143,37 @@ impl<'a> ProcessOfTask<'a>{
         File::open(file_path).unwrap()
     }
 
-    pub fn init_handler(a_task : &Task) -> Command {
-        let cmd = a_task.cmd.clone().remove(0);
-        let mut args = a_task.cmd.clone();
+    fn stdio_from_file_append(p  :PathBuf) -> Stdio {
+        let s = String::from(p.to_str().unwrap());
+        let file_path = Path::new(&s);
+        let opened_append_file = File::options().append(true).open(file_path).unwrap();
+        Stdio::from(opened_append_file)
+    }
 
-        println!("{} {:?}", cmd, args);
+    pub fn init_handler(a_task : Task) -> Command {
+        //let cmd = a_task.cmd.clone().remove(0);
+        //let mut args = a_task.cmd.clone();
+        let mut cmd_args = a_task.cmd.clone().join(" ");
+
+        //println!("{} {:?}", cmd, args);
+        println!("{:?}", cmd_args);
         
         let mut handler = Command::new("bash");
         handler.current_dir(a_task.workingdir.clone());
         handler.arg("-c");
-        handler.args(a_task.cmd.clone());
-        handler.stdout(Stdio::from(Self::pathBuf_to_File(a_task.stdout.clone()))); // Set stdout to capture command output
-        handler.stderr(Stdio::from(Self::pathBuf_to_File(a_task.stderr.clone()))); // Set stderr to capture command error
+        //handler.args(a_task.cmd.clone());
+        //handler.arg("bash ../scripts/forever.sh");
+        handler.arg(cmd_args);
+        //handler.stdout(Stdio::from(Self::pathBuf_to_File(a_task.stdout.clone()))); // Set stdout to capture command output
+        //handler.stderr(Stdio::from(Self::pathBuf_to_File(a_task.stderr.clone()))); // Set stderr to capture command error
+
+        //let opened_stdin = File::options().append(true).open("./log/debug_stdout").unwrap();
+        //let opened_stderr = File::options().append(true).open("./log/debug_stderr").unwrap();
         
+        handler.stdout(Self::stdio_from_file_append(a_task.stdout.clone())); // Set stdout to capture command output
+        handler.stderr(Self::stdio_from_file_append(a_task.stderr.clone())); // Set stderr to capture command error
+        //handler.stdout(Stdio::inherit());
+        //handler.stderr(Stdio::inherit());
         
         //handler.stderr(Stdio::from(Self::pathBuf_to_File(a_task.stderr.clone()))); // Set stderr to capture command error
             /* .pre_exec(|| {
@@ -172,7 +192,7 @@ impl<'a> ProcessOfTask<'a>{
     }
 
 
-    fn is_process_running(&mut self, pid: u32) -> Option<bool> {
+    /*fn is_process_running(&mut self, pid: u32) -> Option<bool> {
         // Run the "ps" command to list processes
         let output_res = Command::new("ps")
             .arg("-p")
@@ -189,7 +209,7 @@ impl<'a> ProcessOfTask<'a>{
                 return None;
             }
         }
-    }
+    }*/
 
     pub async fn run(&mut self) {
         /* runs and when takes care of exitcode */
@@ -206,18 +226,50 @@ impl<'a> ProcessOfTask<'a>{
         let cmd_spawned_res : io::Result<Child> = self.handler.spawn(); 
         //let cmd_spawned_res = self.handler.output(); 
         
+        
         match cmd_spawned_res {
             Ok(mut child) => {
                 self.pid = Some(child.id());
+                
 
                 match self.pid {
-                    Some(_) => {},
+                    Some(_) => {
+
+                        println!("GONNA WAIT??");
+                        println!("?? {}", self.pid.unwrap());
+                        let cmd_exit_status_res = child.wait();
+                        match cmd_exit_status_res {
+                            Ok(v) => {      
+                                let exitcode_opt = v.code();
+                                match exitcode_opt {
+                                    Some(v) => {
+                                        self.final_exit_code = Some(v);        
+                                    },
+                                    None => {
+                                        eprintln!("cant retrieve CODE NB from exitStatus of process");
+                                    }
+                                }
+
+                        
+                                
+                            },
+                            Err(e) => {
+                                eprintln!("{}", format!("no ExitSatus of process : {}",e.to_string()));
+                            }
+                        }
+
+
+
+
+                    },
                     None => {
-                        self.write_to_log_details("err", format!("couldn't retreive PID"));
+                        self.write_to_log_details("err", format!("couldn't retreive PID cause maybe process wasnt launched yet"));
                     }
                 }
-                println!("GONNA WAIT??");
-                println!("?? {}", self.pid.unwrap());
+                
+
+
+                
                 /*let exit_status_res = child.wait();
                 println!("DONE??");
                 match exit_status_res {
@@ -234,7 +286,7 @@ impl<'a> ProcessOfTask<'a>{
                                     self.write_to_log_details("out", format!("127 means couldn't find path for script"));
                                 }
                                 
-                                //compare to self.task_ref.exitcodes and print if existed gracefully 
+                                //compare to self.task.exitcodes and print if existed gracefully 
 
                             },
                             None => {
@@ -248,7 +300,7 @@ impl<'a> ProcessOfTask<'a>{
                 }*/
                 self.child_handler = Some(child);
             }
-            Err(e) => self.write_to_log_details("err", format!("{} [{:?}] : {}", String::from("command run failed :"), self.task_ref.cmd,e.to_string())),
+            Err(e) => self.write_to_log_details("err", format!("{} [{:?}] : {}", String::from("command run failed :"), self.task.cmd,e.to_string())),
         }    
 
 
@@ -262,11 +314,11 @@ impl<'a> ProcessOfTask<'a>{
     pub async fn graceful_stop_timeout_kill(&mut self) {
         match self.child_handler {
             Some(ref mut child) => {
-                sleep(Duration::from_secs(self.task_ref.stoptime.into()));
+                sleep(Duration::from_secs(self.task.stoptime.into()));
                 let kill_res = child.kill(); //SIGKILL
                 match kill_res {
                     Ok(_) => {
-                        self.write_to_log_details("out", format!("killed, graceful stop failed to execute before timeout : {}", self.task_ref.stoptime));
+                        self.write_to_log_details("out", format!("killed, graceful stop failed to execute before timeout : {}", self.task.stoptime));
                     },
                     Err(e) => {
                         self.write_to_log_details("err", format!("stop attempt error : {:?}, possibly cause the program stopped gracefully", e.to_string()));
@@ -299,13 +351,19 @@ async fn process1() {
     let task_forever : &Task = task_forever_vec.get(0).unwrap();
     //let task_read_dirs = Task::from_config("./config/only_read_dirs.sconfig").unwrap();
     //let task_ls3 = Task::from_config("./config/ls3.sconfig").unwrap();
-    let mut process_forever = ProcessOfTask::new(task_forever, dev_log_out, dev_log_err);
+    let mut process_forever = ProcessOfTask::new(task_forever.clone(), dev_log_out, dev_log_err);
     //let process_read_dirs = ProcessOfTask::new(&task_read_dirs);
     //let process_ls3 = ProcessOfTask::new(&task_ls3);
-    process_forever.run().await; //the handler field makes these asserts true 
+
+    let a = process_forever.run();
+
+
+    let forever_process_run_future = task::spawn(a);//.await; //the handler field makes these asserts true 
+    sleep(Duration::from_secs(2));
+    let forever_process_stop_future = task::spawn(process_forever.graceful_stop_timeout_kill());
     //assert!(process1.cmd , String::from(""));
     //assert!(process1.pid.is_some());
-    //assert!(process_forever.task_ref.pgrm_name == String::from("forever"));
+    //assert!(process_forever.task.pgrm_name == String::from("forever"));
     //assert!(process_forever.is_running == true);
     //sleep(Duration::from_secs(2));
     //process_forever.stop();

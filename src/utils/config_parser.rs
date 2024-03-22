@@ -15,13 +15,13 @@ use std::time::Duration;
 use std::thread::sleep;
 use regex::Regex;
 use std::process;
-use crate::utils::process::ProcessOfTask;
+use crate::utils::process_async::ProcessOfTask;
 
 
 
-pub struct Taskmaster_Env<'a>{
+pub struct Taskmaster_Env{
     pub all_tasks : Vec<Task>,
-    pub all_processes_of_tasks : Vec<ProcessOfTask<'a>>,
+    pub all_processes_of_tasks : Vec<ProcessOfTask>,
     //pub all_running_processes_of_tasks : Vec<ProcessOfTask>,
 }
 
