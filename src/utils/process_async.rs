@@ -9,7 +9,7 @@ use nix::unistd::{getpid, getppid};
 use tokio::task;
 
 use std::fs::{read_to_string, File, OpenOptions};
-use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}}; //Path::new -> &Path plus needs Box<&Path> since it's unsized (don't implement Sized), Box or & or PathBuf(like an owned Path)  fixes it
+use std::{env, io, path::{Path, PathBuf}, process::{exit, Command, ExitStatus, Stdio}}; //Path::new -> &'a Path plus needs Box<&'a Path> since it's unsized (don't implement Sized), Box or &'a  or PathBuf(like an owned Path)  fixes it
 use std::ffi::OsStr;
 use std::time::Duration;
 use std::thread::sleep;
@@ -68,7 +68,7 @@ pub struct ProcessOfTask {
     log_file_err : String, 
 }
 
-impl ProcessOfTask{
+impl<'a> ProcessOfTask<'a>{
 
     pub fn new(a_task : Task, log_out : String, log_err : String) -> Self {
         let a_task_ = a_task.clone();
@@ -87,23 +87,23 @@ impl ProcessOfTask{
         }
     }
 
-    fn write_to_log_details(&mut self, which_file : &str, msg : String) {
+    fn write_to_log_details(&'a mut self, which_file : &'a str, msg : String) {
         let now_date = Local::now();
         let self_details = format!("[PROGRAM {}] [PID {:?}]",self.task.pgrm_name, self.pid);
         self.write_to_log(which_file, format!("[{}] {} {}",now_date, self_details, msg));
     }
 
-    fn eprintln_details(&mut self, msg : String) {
+    fn eprintln_details(&'a mut self, msg : String) {
         let now_date = Local::now();
         let self_details = format!("[PROGRAM {}] [PID {:?}]",self.task.pgrm_name, self.pid);
         eprintln!("{}", format!("[{}] {} {}",now_date, self_details, msg));
     }
     
 
-    fn write_to_log(&mut self, which : &str, data : String) {
+    fn write_to_log(&'a mut self, which : &'a str, data : String) {
         /* i can't write to log the open/write to log errors so i can only print them out on stderr */
         let data : String = data + "\n";
-        let log_to_write = if which == "err" { &self.log_file_err } else { &self.log_file_out };
+        let log_to_write = if which == "err" { &'a self.log_file_err } else { &'a self.log_file_out };
         let file_opened_res = OpenOptions::new()
                                                     .create(true)
                                                     .append(true)
@@ -128,24 +128,24 @@ impl ProcessOfTask{
         }
     }
 
-    //fn name_pid_str(&self) -> String {
+    //fn name_pid_str(&'a self) -> String {
     //    format!(" PROGRAM <{}> PID[{:?}] ",self.task.pgrm_name, self.pid)
     //}
 
-    /*pub fn run(&mut self) {
+    /*pub fn run(&'a mut self) {
         self.init
 
     }*/
 
     fn pathBuf_to_File(p  :PathBuf) -> File {
         let s = String::from(p.to_str().unwrap());
-        let file_path = Path::new(&s);
+        let file_path = Path::new(&'a s);
         File::open(file_path).unwrap()
     }
 
     fn stdio_from_file_append(p  :PathBuf) -> Stdio {
         let s = String::from(p.to_str().unwrap());
-        let file_path = Path::new(&s);
+        let file_path = Path::new(&'a s);
         let opened_append_file = File::options().append(true).open(file_path).unwrap();
         Stdio::from(opened_append_file)
     }
@@ -185,14 +185,14 @@ impl ProcessOfTask{
             });*/
         
 
-        for (key, value) in &a_task.env {
+        for (key, value) in &'a a_task.env {
             handler.env(key, value);
         }
         handler
     }
 
 
-    /*fn is_process_running(&mut self, pid: u32) -> Option<bool> {
+    /*fn is_process_running(&'a mut self, pid: u32) -> Option<bool> {
         // Run the "ps" command to list processes
         let output_res = Command::new("ps")
             .arg("-p")
@@ -201,8 +201,8 @@ impl ProcessOfTask{
         match output_res {
             Ok(output) => {      
                 // Check if the output contains the header line and the process ID
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                Some(output_str.contains("PID") && output_str.contains(&pid.to_string()))        
+                let output_str = String::from_utf8_lossy(&'a output.stdout);
+                Some(output_str.contains("PID") &'a &'a  output_str.contains(&'a pid.to_string()))        
             },
             Err(e) => {
                 self.write_to_log_details("err", format!("couldn't launch the to check if program is running : ps -p PID"));
@@ -211,7 +211,7 @@ impl ProcessOfTask{
         }
     }*/
 
-    pub async fn run(&mut self) {
+    pub async fn run(&'a mut self) {
         /* runs and when takes care of exitcode */
 
         /* dont run if already running  if can't determine stop the program */
@@ -311,7 +311,7 @@ impl ProcessOfTask{
 
     //// Send SIGTERM to child process.
     //signal::kill(Pid::from_raw(child.id()), Signal::SIGTERM).unwrap();
-    pub async fn graceful_stop_timeout_kill(&mut self) {
+    pub async fn graceful_stop_timeout_kill(&'a mut self) {
         match self.child_handler {
             Some(ref mut child) => {
                 sleep(Duration::from_secs(self.task.stoptime.into()));
@@ -346,14 +346,14 @@ async fn process1() {
     let dev_log_err = String::from("./log/debug_stderr");
 
     //theory : Task struct exists but we wanna test independ.   the fns take a core struct , Task uses a to_that_core_struct() method to be used in this fn
-    //let program_cmd_from_config_file = format!("export {} && umask {} && (cd {:?} && {}) >> {:?} 2>> {:?}");
-    let task_forever_vec = Task::from_config(&String::from("./config/forever.sconfig")).unwrap();
-    let task_forever : &Task = task_forever_vec.get(0).unwrap();
+    //let program_cmd_from_config_file = format!("export {} &'a &'a  umask {} &'a &'a  (cd {:?} &'a &'a  {}) >> {:?} 2>> {:?}");
+    let task_forever_vec = Task::from_config(&'a String::from("./config/forever.sconfig")).unwrap();
+    let task_forever : &'a Task = task_forever_vec.get(0).unwrap();
     //let task_read_dirs = Task::from_config("./config/only_read_dirs.sconfig").unwrap();
     //let task_ls3 = Task::from_config("./config/ls3.sconfig").unwrap();
     let mut process_forever = ProcessOfTask::new(task_forever.clone(), dev_log_out, dev_log_err);
-    //let process_read_dirs = ProcessOfTask::new(&task_read_dirs);
-    //let process_ls3 = ProcessOfTask::new(&task_ls3);
+    //let process_read_dirs = ProcessOfTask::new(&'a task_read_dirs);
+    //let process_ls3 = ProcessOfTask::new(&'a task_ls3);
 
     let a = process_forever.run();
 
